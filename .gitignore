@@ -1,0 +1,21 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+__pycache*
+.conda
+.ruff_cache
+/.venv/
+/mTurk/
+/participant_data_corrected/
+/R/
+*.RData
+/__pycache/
+__pycache__/
+# the venv created by the setup script
+tests/pyrcicr/
+*.png
+*.jpg
+stimuli/
+.vscode/
+.cis/
