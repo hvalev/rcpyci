@@ -23,6 +23,34 @@ def generate_sinusoid(img_size: int, cycles: int, angle: int, phase: int, contra
     sinusoid = contrast * np.sin(sinusoid)
     return sinusoid
 
+import jax.numpy as jnp
+from jax import jit
+
+@jit
+def generate_sinusoid_jax(img_size: int, cycles: int, angle: float, phase: float, contrast: float) -> jnp.ndarray:
+    """
+    Generate a sinusoidal patch.
+
+    Parameters:
+    - img_size (int): Size of the patch.
+    - cycles (int): Number of cycles in the sinusoid.
+    - angle (float): Angle of orientation in degrees.
+    - phase (float): Phase of the sinusoid.
+    - contrast (float): Contrast of the sinusoid.
+
+    Returns:
+    - jnp.ndarray: The generated sinusoidal patch.
+    """
+    angle = jnp.radians(angle)
+    x = jnp.linspace(0, cycles, img_size)
+    y = jnp.linspace(0, cycles, img_size)
+    X, Y = jnp.meshgrid(x, y)
+    sinepatch = X * jnp.cos(angle) + Y * jnp.sin(angle)
+    sinusoid = (sinepatch * 2 * jnp.pi) + phase
+    sinusoid = contrast * jnp.sin(sinusoid)
+    return sinusoid
+
+
 def generate_gabor(img_size, cycles, angle, phase, sigma, contrast):
     sinusoid = generate_sinusoid(img_size, cycles, angle, phase, contrast)
     x0 = np.linspace(-0.5, 0.5, img_size)
@@ -30,6 +58,33 @@ def generate_gabor(img_size, cycles, angle, phase, sigma, contrast):
     gauss_mask = np.exp(-((X ** 2 + Y ** 2) / (2 * (sigma / img_size) ** 2)))
     gabor = gauss_mask * sinusoid
     return gabor
+
+import jax.numpy as jnp
+from jax import jit
+
+@jit
+def generate_gabor_jax(img_size: int, cycles: int, angle: float, phase: float, sigma: float, contrast: float) -> jnp.ndarray:
+    """
+    Generate a Gabor patch.
+
+    Parameters:
+    - img_size (int): Size of the patch.
+    - cycles (int): Number of cycles in the Gabor.
+    - angle (float): Angle of orientation in degrees.
+    - phase (float): Phase of the Gabor.
+    - sigma (float): Standard deviation of the Gaussian envelope.
+    - contrast (float): Contrast of the Gabor.
+
+    Returns:
+    - jnp.ndarray: The generated Gabor patch.
+    """
+    sinusoid = generate_sinusoid(img_size, cycles, angle, phase, contrast)
+    x0 = jnp.linspace(-0.5, 0.5, img_size)
+    X, Y = jnp.meshgrid(x0, x0)
+    gauss_mask = jnp.exp(-((X ** 2 + Y ** 2) / (2 * (sigma / img_size) ** 2)))
+    gabor = gauss_mask * sinusoid
+    return gabor
+
 
 def generate_scales(img_size=512, nscales=5):
     scales = 2 ** np.arange(nscales)
@@ -39,8 +94,35 @@ def generate_scales(img_size=512, nscales=5):
     #and then actually convert it to integers.
     return patch_size
 
-def generate_noise_pattern(img_size=512, nscales=5, noise_type='sinusoid', sigma=25, pre_0_3_0=False):
+import jax.numpy as jnp
+from jax import jit
+
+@jit
+def generate_scales_jax(img_size: int = 512) -> jnp.ndarray:
+    """
+    Generate patch sizes for different scales.
+
+    Parameters:
+    - img_size (int): Size of the image.
+    - nscales (int): Number of scales.
+
+    Returns:
+    - jnp.ndarray: Patch sizes for different scales.
+    """
+    x, y = jnp.meshgrid(jnp.arange(1, img_size+1), jnp.arange(1, img_size+1))
+    patch_size = x / y
+
+    # Check if all patch sizes are integer convertible
+    if jnp.all(jnp.mod(patch_size, 1) == 0):
+        patch_size = patch_size.astype(int)  # Convert to integers if all are convertible
+
+    return patch_size
+
+
+def generate_noise_pattern(img_size=512, nscales=5, noise_type='sinusoid', sigma=25):
     # Settings of sinusoids
+    #TODO move to consts? or parametrize? or both. CONSTS and just feed them in
+    #TODO save them 
     orientations = np.array([0, 30, 60, 90, 120, 150])
     phases = np.array([0, np.pi/2])
     scales = 2 ** np.arange(nscales)
@@ -56,19 +138,12 @@ def generate_noise_pattern(img_size=512, nscales=5, noise_type='sinusoid', sigma
     patches = np.zeros((img_size, img_size, nr_patches))
     patch_idx = np.zeros((img_size, img_size, nr_patches))
 
-    # Counters
-    if pre_0_3_0:
-        co = 0  # patch layer counter
-        idx = 0  # contrast index counter
-    else:
-        co = 1  # patch layer counter
-        idx = 1  # contrast index counter
-
+    co = 0  # patch layer counter
+    idx = 0  # contrast index counter
     for scale in scales:
         for orientation in orientations:
             for phase in phases:
                 # Generate single patch
-                #size = patch_size[int(scale) - 1, :, :]
                 size = patch_size[int(scale) - 1, img_size - 1]
                 if noise_type == 'gabor':
                     p = generate_gabor(int(size), 1.5, int(orientation), phase, sigma, 1)
@@ -77,21 +152,48 @@ def generate_noise_pattern(img_size=512, nscales=5, noise_type='sinusoid', sigma
                     p = generate_sinusoid(int(size), int(2), int(orientation), phase, 1)
 
                 # Repeat to fill scale
-                patches[:, :, co - 1] = np.tile(p, (scale, scale))
+                patches[:, :, co] = np.tile(p, (scale, scale))
 
                 # Create index matrix
-                for col in range(1, scale + 1):
-                    for row in range(1, scale + 1):
-                        # Insert absolute index for later contrast weighting
-                        patch_idx[int(size * (row - 1)):int(size * row), int(size * (col - 1)):int(size * col), co - 1] = idx
-
-                        # Update contrast counter
-                        idx += 1
+                row_indices, col_indices = np.meshgrid(np.arange(scale) * size, np.arange(scale) * size)
+                patch_idx[row_indices, col_indices, co] = idx
+                idx += scale ** 2
 
                 # Update layer counter
                 co += 1
 
     return {'patches': patches, 'patchIdx': patch_idx, 'noise_type': noise_type, 'generator_version': '0.3.0'}
+
+def generate_noise_pattern_jax(img_size=512, nscales=5, noise_type='sinusoid', sigma=25):
+    import jax.numpy as jnp
+    from jax import jit, vmap
+    orientations = np.array([0, 30, 60, 90, 120, 150])
+    phases = np.array([0, np.pi/2])
+    scales = 2 ** np.arange(nscales)
+
+    # Generate indices for all combinations of scales, orientations, and phases
+    scales_grid, orientations_grid, phases_grid = jnp.meshgrid(scales, orientations, phases, indexing='ij')
+    all_combinations = jnp.stack([scales_grid.ravel(), orientations_grid.ravel(), phases_grid.ravel()], axis=-1)
+
+    patch_size = generate_scales(img_size=img_size, nscales=nscales)
+
+    # Generate single patches for all combinations
+    sizes = patch_size[(all_combinations[:, 0].astype(int) - 1), img_size - 1]
+    if noise_type == 'gabor':
+        patches = vmap(lambda size, orientation, phase: generate_gabor(int(size), 1.5, int(orientation), phase, sigma, 1))(sizes, all_combinations[:, 1], all_combinations[:, 2])
+    else:
+        patches = vmap(lambda size, orientation, phase: generate_sinusoid(int(size), int(2), int(orientation), phase, 1))(sizes, all_combinations[:, 1], all_combinations[:, 2])
+
+    # Repeat to fill scales
+    patches = jnp.repeat(patches, sizes * sizes)
+
+    # Create index matrix
+    row_indices = jnp.tile(jnp.repeat(jnp.arange(img_size), img_size), len(all_combinations))
+    col_indices = jnp.tile(jnp.tile(jnp.arange(img_size), img_size), len(all_combinations))
+    patch_indices = jnp.concatenate([jnp.repeat(jnp.arange(scale) * size, scale) for scale, _, _ in all_combinations])
+
+    patch_idx = jnp.zeros((img_size, img_size, nr_patches))
+    patch_idx = jax.ops.index_update(patch_idx, (row_indices, col_indices, slice(None)), jnp.tile(patch_indices, len(all_combinations)).reshape((-1, nr_patches)))
 
 
 
@@ -222,6 +324,35 @@ def process_quick_zmap(ci, sigma, threshold):
     zmap[(zmap > -threshold) & (zmap < threshold)] = np.nan
     return {"blurred_ci": blurred_ci, "scaled_image": scaled_image, "zmap": zmap}
 
+import jax.numpy as jnp
+from jax import jit
+from jax.scipy.ndimage import gaussian_filter
+
+@jit
+def process_quick_zmap_jax(ci: jnp.ndarray, sigma: float, threshold: float) -> dict:
+    """
+    Process a confidence map to generate a z-map.
+
+    Parameters:
+    - ci (jnp.ndarray): Confidence map.
+    - sigma (float): Standard deviation for Gaussian blurring.
+    - threshold (float): Threshold value for creating the z-map.
+
+    Returns:
+    - dict: Dictionary containing blurred confidence map, scaled image, and z-map.
+    """
+    # Blur CI
+    blurred_ci = gaussian_filter(ci, sigma=sigma)
+
+    # Create z-map
+    scaled_image = (blurred_ci - jnp.mean(blurred_ci)) / jnp.std(blurred_ci)
+
+    # Apply threshold
+    zmap = jnp.where((-threshold < scaled_image) & (scaled_image < threshold), jnp.nan, scaled_image)
+
+    return {"blurred_ci": blurred_ci, "scaled_image": scaled_image, "zmap": zmap}
+
+
 def process_ttest_zmap(params, responses,img_size, ci, rdata, n_cores=1, pid_cis=None):
     # Load parameter file (created when generating stimuli)
     npzfile = np.load(rdata)
@@ -300,8 +431,103 @@ def apply_scaling(base, ci, scaling, constant):
         scaled = ci
     return scaled
 
+
+import jax.numpy as jnp
+from jax import jit
+
+@jit
+def apply_scaling_none(base, ci):
+    """
+    Apply 'none' scaling to the classification image.
+
+    Parameters:
+    - base (jnp.ndarray): Base array.
+    - ci (jnp.ndarray): Confidence map.
+
+    Returns:
+    - jnp.ndarray: Scaled classification image.
+    """
+    return ci
+
+@jit
+def apply_scaling_constant(base, ci, constant):
+    """
+    Apply 'constant' scaling to the classification image.
+
+    Parameters:
+    - base (jnp.ndarray): Base array.
+    - ci (jnp.ndarray): Confidence map.
+    - constant (float): Constant value for scaling.
+
+    Returns:
+    - jnp.ndarray: Scaled classification image.
+    """
+    scaled = (ci + constant) / (2 * constant)
+    if jnp.any((scaled > 1.0) | (scaled < 0)):
+        print("Chosen constant value for constant scaling made noise "
+              "of classification image exceed possible intensity range "
+              "of pixels (<0 or >1). Choose a lower value, or clipping "
+              "will occur.")
+    return scaled
+
+@jit
+def apply_scaling_matched(base, ci):
+    """
+    Apply 'matched' scaling to the classification image.
+
+    Parameters:
+    - base (jnp.ndarray): Base array.
+    - ci (jnp.ndarray): Confidence map.
+
+    Returns:
+    - jnp.ndarray: Scaled classification image.
+    """
+    min_base = jnp.min(base)
+    max_base = jnp.max(base)
+    min_ci = jnp.min(ci[~jnp.isnan(ci)])
+    max_ci = jnp.max(ci[~jnp.isnan(ci)])
+    scaled = min_base + ((max_base - min_base) * (ci - min_ci) / (max_ci - min_ci))
+    return scaled
+
+@jit
+def apply_scaling_independent(base, ci):
+    """
+    Apply 'independent' scaling to the classification image.
+
+    Parameters:
+    - base (jnp.ndarray): Base array.
+    - ci (jnp.ndarray): Confidence map.
+
+    Returns:
+    - jnp.ndarray: Scaled classification image.
+    """
+    constant = jnp.max(jnp.abs(jnp.nanmin(ci)), jnp.abs(jnp.nanmax(ci)))
+    scaled = (ci + constant) / (2 * constant)
+    return scaled
+
+
+
 def combine(scaled, base):
     return (scaled + base) / 2
+
+
+import jax.numpy as jnp
+from jax import jit
+
+@jit
+def combine_jax(scaled, base):
+    """
+    Combine two arrays by taking their element-wise mean.
+
+    Parameters:
+    - scaled (jnp.ndarray): Array to be scaled.
+    - base (jnp.ndarray): Base array.
+
+    Returns:
+    - jnp.ndarray: Combined array with element-wise mean.
+    """
+    return (scaled + base) / 2
+
 
 def save_to_image(baseimage, combined, targetpath, filename, anti_CI):
     filename = filename or baseimage
@@ -325,6 +551,31 @@ def generate_ci_noise(stimuli, responses, p):
     else:
         params = weighted.mean(axis=0)
     return generate_noise_image(params, p)
+
+import jax.numpy as jnp
+from jax import jit
+
+@jit
+def generate_ci_noise_jax(stimuli, responses, p):
+    """
+    Generate noise for
+
+    Parameters:
+    - stimuli (jnp.ndarray): Stimuli array.
+    - responses (jnp.ndarray): Responses array.
+    - p (dict): Parameters dictionary.
+
+    Returns:
+    - jnp.ndarray: Noise image
+    """
+    responses = responses.reshape((responses.shape[0], 1))
+    weighted = stimuli * responses
+    if weighted.ndim == 1:
+        params = weighted
+    else:
+        params = jnp.mean(weighted, axis=0)
+    return generate_noise_image(params, p)
+
 
 
 def generate_noise_image(params, p):
