@@ -12,22 +12,14 @@ import math
 from scipy.stats import norm, ttest_1samp
 from scipy.ndimage import gaussian_filter
 
+from .im_ops import save_image, read_image
+
 #TODO better function names
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
 #TODO clean up interfaces (filepath not needed)
 
 
-#TODO for image processing, maybe use jax.jit to compile a function
-#TODO and use a function reference which builds those image processing pipelines like this
-def post_process_image(image, a):
-    pipe = []
-    if a == 'quick':
-        blur = jit(generate_CI)
-    elif a == 'slow':
-        blur = jit(generate_CI)
-    pipe.append(blur)
 
-    return pipe
 
 # Main function
 def generate_CI(stimuli, 
@@ -37,7 +29,7 @@ def generate_CI(stimuli,
                 noise_type='sinusoid', 
                 nscales=5, 
                 save_as_png=True, 
-                filename='',
+                label='experiment',
                 targetpath='/home/hval/rcpyci/cis', 
                 anti_CI=False, 
                 scaling='independent',
@@ -54,15 +46,16 @@ def generate_CI(stimuli,
     patches, patch_idx, noise_type = generate_noise_pattern(img_size=img_size, noise_type=noise_type, nscales=nscales, sigma=sigma)
     stimuli_params = generate_stimuli_params(n_trials, nscales)
 
-    #TODO add filename anti
-    #TODO use new save_image instead of save_to_image
     #TODO add variable participant (assuming already it's for one participant)
     #TODO when I add the parsing of the dataframe I can set it to condition
     #TODO OR I can have again a wrapper, which has participants and conditions 
     #TODO and this wrapper (similar to the R one) just formats the data and triggers this function to be executed
-    #TODO this idea is better
+    filename = ''
     if anti_CI:
+        filename += 'antici_' + label + ".png"
         stimuli_params = -stimuli_params
+    else:
+        filename += 'ci_' + label + ".png"
 
     # reorder based on selection order
     stimuli_params = stimuli_params[stimuli]
@@ -71,8 +64,10 @@ def generate_CI(stimuli,
         ci = apply_mask(ci, mask)
     scaled = apply_scaling(img, ci, scaling, scaling_constant)
     combined = combine(scaled, img)
+
     if save_as_png:
-        save_to_image(img, combined, targetpath, filename, anti_CI)
+        save_image(image=combined, path='/home/hval/rcpyci/cis/'+filename)
+
     # Z-map
     zmap_image = None
     if zmap:
