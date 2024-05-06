@@ -230,13 +230,7 @@ def generate_stimuli_noise(n_trials, nscales, img_size, noise_type, sigma):
         stimuli[trial,:,:] = noise_pattern
     return stimuli, patches, patch_idx
     
-def read_image(filename, grayscale=True, maximize_contrast=True):
-    img = Image.open(filename)
-    if grayscale:
-        img = img.convert('L')  # Convert to grayscale
-    if maximize_contrast:
-        img = (img - np.min(img)) / (np.max(img) - np.min(img))
-    return np.asarray(img)
+
 
 def generate_stimuli_2IFC(img, n_trials=770, img_size=512, stimulus_path='./stimuli', label='rcic', seed=1, maximize_baseimage_contrast=True, noise_type='sinusoid', nscales=5, sigma=25, return_as_dataframe=False, save_as_png=True, save_rdata=True):
     # Initialize
@@ -362,7 +356,7 @@ folder2 = "stimuli"
 compare_images_in_folders(folder1, folder2)
 
 print("COMPARING GENERATED CI")
-compare_images('/home/hval/rcpyci/cis/python_ci_compared.png','/home/hval/rcpyci/cis/python_ci_.png')
+compare_images('/home/hval/rcpyci/cis/python_ci_compared.png','/home/hval/rcpyci/cis/ci_experiment.png')
 
 zmap = np.load("/home/hval/rcpyci/zmap/zmap_comp.npy")
 if np.array_equal(zmap_image,zmap):
