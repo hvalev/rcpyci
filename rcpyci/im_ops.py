@@ -4,14 +4,19 @@ from PIL import Image
 
 
 ### save/load image operations
-def save_image(image, path, clip=True, scale=True):
+# this function saves an unscaled [0,1] numpy array to an image
+def save_image(image, path, clip=True, scale=True, save_npy=False):
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    if save_npy:
+        npy_path = os.path.splitext(path)[0] + ".npy"
+        np.save(npy_path)
     if clip:
         image = np.clip(image, 0, 1)
     if scale:
         image = image * 255
     Image.fromarray(image.astype(np.uint8)).save(path)
 
+# rescaling image to utilize the full [0,255] range
 def read_image(filename, grayscale=True, maximize_contrast=True):
     img = Image.open(filename)
     if grayscale:
