@@ -67,7 +67,8 @@ def image_pipeline(image):
     return blurred_image
 
 # JIT compile the pipeline function for performance
-jit_image_pipeline = jit(image_pipeline)
+# jit_image_pipeline = jit(default_ci_pipeline)
+# a = jit_image_pipeline
 
 # Now you can use the compiled function on your image data
-processed_image = jit_image_pipeline(input_image)
+#processed_image = jit_image_pipeline(input_image)
