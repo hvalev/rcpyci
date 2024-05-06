@@ -310,19 +310,18 @@ def generate_stimuli_2IFC(img, n_trials=770, img_size=512, stimulus_path='./stim
     
 # Usage
 n_trials = 5
-img_size = 512
-nscales = 5
+n_scales = 5
 sigma = 25
-# nparams = sum(6 * 2 * np.power(2, np.arange(nscales))**2)
+# nparams = sum(6 * 2 * np.power(2, np.arange(n_scales))**2)
 # params = np.random.uniform(-1, 1, size=(n_trials, nparams))
 noise_type = 'sinusoid'
 #base_face_files_dict = {'aName': 'base_face.jpg'}
-image = img = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=(noise_type == 'sinusoid'))
-result_python_unconv = generate_stimuli_2IFC(img=image,
+base_image = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=(noise_type == 'sinusoid'))
+result_python_unconv = generate_stimuli_2IFC(img=base_image,
                                             n_trials=n_trials, 
-                                            img_size=img_size, 
+                                            img_size=base_image.shape[0], 
                                             noise_type=noise_type,
-                                            nscales=nscales, 
+                                            n_scales=n_scales, 
                                             sigma=sigma,
                                             return_as_dataframe=True)
 
@@ -330,13 +329,26 @@ print(result_python_unconv.shape)
 
 stimuli = np.arange(n_trials)
 responses = np.ones(shape=(n_trials,))
-ci, scaled, base, combined, zmap_image = generate_CI(stimuli=stimuli,
+# Define your arguments
+pipeline_kwargs = {
+    'scaling': 'independent',
+    'scaling_constant': 0.1,
+    'mask': None
+}
+
+ci, zmap = compute_ci_and_zmap(base_image=base_image,
+                            stimuli_order=stimuli,
                             responses=responses,
-                            img=image, 
-                            anti_CI=False,
+                            n_trials=n_trials,
+                            n_scales=n_scales,
+                            noise_type=noise_type,
+                            pipeline=default_ci_pipeline,
+                            pipeline_kwargs=pipeline_kwargs,
+                            anti_ci=False,
                             sigma=sigma,
-                            zmap=True,
-                            zmapmethod='t.test',
+                            save_ci=True,
+                            save_zmap=True,
+                            zmap_method='t.test',
                             threshold=1)
 
 
@@ -395,8 +407,8 @@ compare_images_in_folders(folder1, folder2)
 print("COMPARING GENERATED CI")
 compare_images('/home/hval/rcpyci/cis/python_ci_compared.png','/home/hval/rcpyci/cis/ci_experiment.png')
 
-zmap = np.load("/home/hval/rcpyci/zmap/zmap_comp.npy")
-if np.array_equal(zmap_image,zmap):
+test = np.load("/home/hval/rcpyci/zmap/zmap_comp.npy")
+if np.array_equal(zmap, test):
     print('ZMAP t.test are equal also')
 else:
     raise KeyError
