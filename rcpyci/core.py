@@ -103,7 +103,6 @@ def compute_ci_and_zmap(base_image: np.ndarray,
     else:
         filename += 'ci_' + label + ".png"
 
-    # save ci
     if save_ci:
         save_image(image=combined, path='/home/hval/rcpyci/cis/'+filename)
 
@@ -117,23 +116,15 @@ def compute_ci_and_zmap(base_image: np.ndarray,
             np.save("/home/hval/rcpyci/zmap/zmap.npy", zmap)
         else:
             raise ValueError(f"Invalid zmap method: {zmap_method}")
-
-    
     return ci, zmap
 
 def process_quick_zmap(ci, sigma, threshold):
-    # Blur CI
     blurred_ci = gaussian_filter(ci, sigma=sigma, mode='constant', cval=0)
-    # Create z-map
-    scaled_image = (blurred_ci - np.mean(blurred_ci)) / np.std(blurred_ci)
-    # Apply threshold
-    zmap = scaled_image.copy()
+    zmap = (blurred_ci - np.mean(blurred_ci)) / np.std(blurred_ci)
     zmap[(zmap > -threshold) & (zmap < threshold)] = np.nan
     return zmap
 
-
 def process_ttest_zmap(params, responses, patches, patch_idx, img_size, ci):
-    responses = responses.reshape((responses.shape[0], 1))
     weighted_parameters = params * responses
     n_observations = len(responses)
     noise_images = np.zeros((img_size, img_size, n_observations))
@@ -146,20 +137,13 @@ def process_ttest_zmap(params, responses, patches, patch_idx, img_size, ci):
     zmap = np.sign(ci) * np.abs(norm.ppf(p_values / 2))
     return zmap
 
-#TODO This is probably not needed, since for multiple participants we can do it outside the loop or in a different function
-#TODO think of good descriptive names for variables
-def generate_ci_noise(stimuli, responses, patches, patchIdx):
-    # normalize responses, so we can multiply correctly
-    responses = responses.reshape((responses.shape[0],1))
-    # below original function
+def generate_ci_noise(stimuli, responses, patches, patch_idx):
     weighted = stimuli * responses
     if weighted.ndim == 1:
         params = weighted
     else:
         params = weighted.mean(axis=0)
-    return generate_noise_image(params, patches, patchIdx)
-
-
+    return generate_noise_image(params, patches, patch_idx)
 
 #TODO This is jittable and equivalent with jnp equivalent
 #TODO it doesn't play nice with saving images
