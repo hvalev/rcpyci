@@ -53,22 +53,8 @@ def apply_independent_scaling(ci):
     scaled = (ci + constant) / (2 * constant)
     return scaled
 
-# def apply_scaling(base, ci, scaling, constant=None):
-#     if scaling == 'none':
-#         scaled = ci
-#     elif scaling == 'constant':
-#         scaled = apply_constant_scaling(ci, constant)
-#     elif scaling == 'matched':
-#         scaled = apply_matched_scaling(ci, base)
-#     elif scaling == 'independent':
-#         scaled = apply_independent_scaling(ci)
-#     else:
-#         print(f"Scaling method '{scaling}' not found. Using none.")
-#         scaled = ci
-#     return scaled
-
-def combine(scaled, base):
-    return (scaled + base) / 2
+def combine(im1, im2):
+    return (im1 + im2) / 2
 
 ### pipelines
 import jax.numpy as jnp
