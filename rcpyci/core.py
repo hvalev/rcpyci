@@ -312,7 +312,7 @@ result_python_unconv = generate_stimuli_2IFC(img=base_image,
 print(result_python_unconv.shape)
 
 stimuli = np.arange(n_trials)
-responses = np.ones(shape=(n_trials,))
+responses = np.ones(shape=(n_trials,1))
 # Define your arguments
 pipeline_kwargs = {
     'scaling': 'independent',
