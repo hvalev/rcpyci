@@ -18,8 +18,7 @@ from consts import default_pipeline_kwargs
 #TODO better function names
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
 #TODO clean up interfaces (filepath not needed)
-
-
+#TODO add logging
 
 
 # Main function
