@@ -23,63 +23,104 @@ from consts import default_pipeline_kwargs
 
 
 # Main function
-def generate_CI(stimuli, 
-                responses, 
-                img, 
-                img_size=512, 
-                noise_type='sinusoid', 
-                nscales=5, 
-                save_as_png=True, 
-                label='experiment',
-                targetpath='/home/hval/rcpyci/cis', 
-                anti_CI=False, 
-                scaling='independent',
-                scaling_constant=0.1, 
-                individual_scaling='independent',
-                individual_scaling_constant=0.1, 
-                zmap=False,
-                zmapmethod='quick', 
-                sigma=3,
-                threshold=3, 
-                zmaptargetpath='./zmaps',
-                mask=None):
-    # Load parameter file (created when generating stimuli)
-    patches, patch_idx, noise_type = generate_noise_pattern(img_size=img_size, noise_type=noise_type, nscales=nscales, sigma=sigma)
-    stimuli_params = generate_stimuli_params(n_trials, nscales)
+def compute_ci(base_image: np.ndarray,
+               responses: np.ndarray,
+               stimuli_order: np.ndarray = None,
+               stimuli_params: np.ndarray = None,
+               patches: np.ndarray = None,
+               patch_idx: np.ndarray = None,
+               pipeline=default_ci_pipeline,
+               pipeline_kwargs=default_pipeline_kwargs,
+               anti_ci=False,
+               n_trials=770,
+               n_scales=5,
+               sigma=5,
+               noise_type='sinusoid'):
+    assert len(base_image.shape) == 2
+    assert base_image.shape[0] == base_image.shape[1]
+    img_size = base_image.shape[0]
+    # recompute the stimuli params if not passed
+    # this should not happen if called from compute_ci_and_zmap
+    # TODO make sure there is a way to check if seed is set
+    if stimuli_params is None:
+        stimuli_params = generate_stimuli_params(n_trials, n_scales)
+    if patches is None or patch_idx is None:
+        patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+    if stimuli_order is None:
+        stimuli_order = np.arange(0,responses.shape[0]).astype(int)
+    # reorder based on selection order
+    stimuli_params = stimuli_params[stimuli_order]
+    if anti_ci:
+        stimuli_params = -stimuli_params
+    
+    ci = generate_ci_noise(stimuli_params, responses, patches, patch_idx)
+    return ci
 
-    #TODO add variable participant (assuming already it's for one participant)
-    #TODO when I add the parsing of the dataframe I can set it to condition
-    #TODO OR I can have again a wrapper, which has participants and conditions 
-    #TODO and this wrapper (similar to the R one) just formats the data and triggers this function to be executed
+#wrapper method for ci and zmap as zmap depends on the generation of the ci
+#and also 
+def compute_ci_and_zmap(base_image: np.ndarray,
+                        responses: np.ndarray,
+                        stimuli_order: np.ndarray = None,
+                        stimuli_params: np.ndarray = None,
+                        pipeline=default_ci_pipeline,
+                        pipeline_kwargs=default_pipeline_kwargs,
+                        anti_ci=False,
+                        n_trials=770,
+                        n_scales=5,
+                        sigma=5,
+                        noise_type='sinusoid',
+                        save_ci=True,
+                        save_zmap=True,
+                        zmap_method='t.test',
+                        threshold=3, 
+                        zmaptargetpath='./zmaps',
+                        label='experiment'):
+    assert len(base_image.shape) == 2
+    assert base_image.shape[0] == base_image.shape[1]
+    img_size = base_image.shape[0]
+    # Load parameter file (created when generating stimuli)
+    stimuli_params = generate_stimuli_params(n_trials, n_scales)
+    patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+    ci = compute_ci(base_image = base_image,
+                    responses = responses,
+                    stimuli_order = stimuli_order,
+                    stimuli_params = stimuli_params,
+                    patches = patches,
+                    patch_idx= patch_idx,
+                    pipeline = pipeline,
+                    pipeline_kwargs = pipeline_kwargs,
+                    anti_ci = anti_ci,
+                    n_trials= n_trials,
+                    n_scales= n_scales,
+                    sigma = sigma,
+                    noise_type = noise_type)
+    # unroll pipeline params
+    combined = pipeline(base_image, ci, **pipeline_kwargs)
+
     filename = ''
-    if anti_CI:
+    if anti_ci:
         filename += 'antici_' + label + ".png"
         stimuli_params = -stimuli_params
     else:
         filename += 'ci_' + label + ".png"
 
-    # reorder based on selection order
-    stimuli_params = stimuli_params[stimuli]
-    ci = generate_ci_noise(stimuli_params, responses, patches, patch_idx)
-    if mask is not None:
-        ci = apply_mask(ci, mask)
-    scaled = apply_scaling(img, ci, scaling, scaling_constant)
-    combined = combine(scaled, img)
-
-    if save_as_png:
+    # save ci
+    if save_ci:
         save_image(image=combined, path='/home/hval/rcpyci/cis/'+filename)
 
-    # Z-map
-    zmap_image = None
-    if zmap:
-        if zmapmethod == 'quick':
-            blurred_ci, scaled_image, zmap_image = process_quick_zmap(ci, sigma, threshold)
-        elif zmapmethod == 't.test':
-            zmap_image = process_ttest_zmap(stimuli_params, responses, patches, patch_idx, img_size, ci)
-            np.save("/home/hval/rcpyci/zmap/zmap.npy", zmap_image)
+    zmap = None
+    if save_zmap:
+        if zmap_method == 'quick':
+            zmap = process_quick_zmap(ci, sigma, threshold)
+        elif zmap_method == 't.test':
+            zmap = process_ttest_zmap(stimuli_params, responses, patches, patch_idx, img_size, ci)
+            #TODO remove this and pull the save in the aggregated function
+            np.save("/home/hval/rcpyci/zmap/zmap.npy", zmap)
         else:
-            raise ValueError(f"Invalid zmap method: {zmapmethod}")
-    return ci, scaled, img, combined, zmap_image
+            raise ValueError(f"Invalid zmap method: {zmap_method}")
+
+    
+    return ci, zmap
 
 def process_quick_zmap(ci, sigma, threshold):
     # Blur CI
@@ -89,11 +130,9 @@ def process_quick_zmap(ci, sigma, threshold):
     # Apply threshold
     zmap = scaled_image.copy()
     zmap[(zmap > -threshold) & (zmap < threshold)] = np.nan
-    return blurred_ci, scaled_image, zmap
+    return zmap
 
-# TODO I can generate the zmaps outside of generating the CIs...
-# TODO here I need to make sure that I do the stimuli_params[selection] and also pass responses
-# TODO to make sure the params are in the correct order
+
 def process_ttest_zmap(params, responses, patches, patch_idx, img_size, ci):
     responses = responses.reshape((responses.shape[0], 1))
     weighted_parameters = params * responses
