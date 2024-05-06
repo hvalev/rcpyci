@@ -205,12 +205,12 @@ def generate_scales(img_size:int = 512):
     patch_size_int = np.round(patch_size).astype(int)
     return patch_size_int
 
-def generate_noise_pattern(img_size=512, nscales=5, noise_type='sinusoid', sigma=25):
+def generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', sigma=25):
     #TODO move those to variables
     # Settings of sinusoids
     orientations = np.array([0, 30, 60, 90, 120, 150])
     phases = np.array([0, np.pi/2])
-    scales = 2 ** np.arange(nscales)
+    scales = 2 ** np.arange(n_scales)
     assert scales.dtype == np.int64
 
     # Size of patches per scale
