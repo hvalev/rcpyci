@@ -20,3 +20,9 @@ stimuli/
 .vscode/
 .cis/
 /rcpyci/rcpyci
+/tests/pyrcicr_ref/build/
+*egg-info*
+*.npy
+/zmap
+/cis
+/stimuli*
