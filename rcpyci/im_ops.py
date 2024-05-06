@@ -21,10 +21,6 @@ def read_image(filename, grayscale=True, maximize_contrast=True):
     return np.asarray(img)
 
 ### image processing operators
-def load_mask_from_file(mask_path):
-    mask_matrix = np.array(Image.open(mask_path).convert('L'))
-    return mask_matrix
-
 def apply_mask(ci, mask):
     if isinstance(mask, str):
         mask_matrix = read_image(mask, grayscale=True)
