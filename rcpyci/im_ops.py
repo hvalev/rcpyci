@@ -60,11 +60,16 @@ def combine(im1, im2):
 
 
 # Define a pipeline function that chains multiple image operations
-def image_pipeline(image):
-    grayscale_image = grayscale(image)
-    resized_image = resize(grayscale_image, (100, 100))
-    blurred_image = gaussian_blur(resized_image, sigma=1)
-    return blurred_image
+def default_ci_pipeline(base_image, ci, mask, scaling, scaling_constant):
+    if mask is not None:
+        ci = apply_mask(ci, mask)
+    scaled = apply_independent_scaling(ci)
+    if scaling == 'independent':
+        scaled = apply_independent_scaling(ci)
+    elif scaling == 'constant':
+        scaled = apply_constant_scaling(ci, scaling_constant)
+    combined = combine(base_image, scaled)
+    return combined
 
 # JIT compile the pipeline function for performance
 # jit_image_pipeline = jit(default_ci_pipeline)
