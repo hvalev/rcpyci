@@ -26,3 +26,4 @@ stimuli/
 /zmap
 /cis
 /stimuli*
+*.bak.py
