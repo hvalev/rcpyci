@@ -12,7 +12,8 @@ import math
 from scipy.stats import norm, ttest_1samp
 from scipy.ndimage import gaussian_filter
 
-from .im_ops import save_image, read_image
+from im_ops import save_image, read_image, default_ci_pipeline
+from consts import default_pipeline_kwargs
 
 #TODO better function names
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
