@@ -259,28 +259,23 @@ def generate_stimuli_params(n_trials, n_scales):
     stimuli_params = np.random.uniform(-1, 1, size=(n_trials, nparams))
     return stimuli_params
 
-def generate_stimuli_noise(n_trials, nscales, img_size, noise_type, sigma):
-    stimuli_params = generate_stimuli_params(n_trials, nscales)
-    # Preallocate stimulus array
+def generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma):
+    stimuli_params = generate_stimuli_params(n_trials, n_scales)
     stimuli = np.zeros((n_trials, img_size, img_size))
-    # Generate noise pattern
-    patches, patch_idx, noise_type = generate_noise_pattern(img_size=img_size, noise_type=noise_type, nscales=nscales, sigma=sigma)
+    patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
     for trial in tqdm(range(n_trials)):
-        #for base_face in base_faces:
         params = stimuli_params[trial]
         noise_pattern = generate_noise_image(params, patches, patch_idx)
         stimuli[trial,:,:] = noise_pattern
     return stimuli, patches, patch_idx
-    
 
-
-def generate_stimuli_2IFC(img, n_trials=770, img_size=512, stimulus_path='./stimuli', label='rcic', seed=1, maximize_baseimage_contrast=True, noise_type='sinusoid', nscales=5, sigma=25, return_as_dataframe=False, save_as_png=True, save_rdata=True):
+def generate_stimuli_2IFC(img, n_trials=770, img_size=512, stimulus_path='./stimuli', label='rcic', seed=1, maximize_baseimage_contrast=True, noise_type='sinusoid', n_scales=5, sigma=25, return_as_dataframe=False, save_as_png=True, save_rdata=True):
     # Initialize
     np.random.seed(seed)
     random.seed(seed)
     os.makedirs(stimulus_path, exist_ok=True)
     base_face = img
-    stimuli, patches, patch_idx = generate_stimuli_noise(n_trials, nscales, img_size, noise_type, sigma)
+    stimuli, patches, patch_idx = generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma)
     for trial in tqdm(range(stimuli.shape[0])):
         trial_adj = trial+1
         # Scale noise
