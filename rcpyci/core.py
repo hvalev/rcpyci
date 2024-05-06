@@ -19,9 +19,8 @@ from consts import default_pipeline_kwargs
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
 #TODO clean up interfaces (filepath not needed)
 #TODO add logging
-
-
-# Main function
+#TODO make sure there is a global way to set seed
+    
 def compute_ci(base_image: np.ndarray,
                responses: np.ndarray,
                stimuli_order: np.ndarray = None,
@@ -38,25 +37,23 @@ def compute_ci(base_image: np.ndarray,
     assert len(base_image.shape) == 2
     assert base_image.shape[0] == base_image.shape[1]
     img_size = base_image.shape[0]
-    # recompute the stimuli params if not passed
-    # this should not happen if called from compute_ci_and_zmap
-    # TODO make sure there is a way to check if seed is set
+    
     if stimuli_params is None:
         stimuli_params = generate_stimuli_params(n_trials, n_scales)
     if patches is None or patch_idx is None:
         patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
     if stimuli_order is None:
         stimuli_order = np.arange(0,responses.shape[0]).astype(int)
-    # reorder based on selection order
+
+    # reorder stimuli params based on the selection order
     stimuli_params = stimuli_params[stimuli_order]
     if anti_ci:
         stimuli_params = -stimuli_params
     
     ci = generate_ci_noise(stimuli_params, responses, patches, patch_idx)
-    return ci
+    combined = pipeline(base_image, ci, **pipeline_kwargs)
+    return ci, combined
 
-#wrapper method for ci and zmap as zmap depends on the generation of the ci
-#and also 
 def compute_ci_and_zmap(base_image: np.ndarray,
                         responses: np.ndarray,
                         stimuli_order: np.ndarray = None,
@@ -71,7 +68,7 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         save_ci=True,
                         save_zmap=True,
                         zmap_method='t.test',
-                        threshold=3, 
+                        threshold=3,
                         zmaptargetpath='./zmaps',
                         label='experiment'):
     assert len(base_image.shape) == 2
@@ -80,7 +77,8 @@ def compute_ci_and_zmap(base_image: np.ndarray,
     # Load parameter file (created when generating stimuli)
     stimuli_params = generate_stimuli_params(n_trials, n_scales)
     patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
-    ci = compute_ci(base_image = base_image,
+
+    ci, combined = compute_ci(base_image = base_image,
                     responses = responses,
                     stimuli_order = stimuli_order,
                     stimuli_params = stimuli_params,
@@ -93,8 +91,7 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                     n_scales= n_scales,
                     sigma = sigma,
                     noise_type = noise_type)
-    # unroll pipeline params
-    combined = pipeline(base_image, ci, **pipeline_kwargs)
+    
 
     filename = ''
     if anti_ci:
