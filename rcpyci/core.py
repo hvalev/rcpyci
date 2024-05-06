@@ -247,12 +247,15 @@ def generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', sigm
                         idx += 1
                 # Update layer counter
                 co += 1
-    return patches, patch_idx, noise_type
+    return patches, patch_idx
 
-def generate_stimuli_params(n_trials, nscales):
-    # Compute number of parameters needed
-    nparams = sum(6 * 2 * np.power(2, np.arange(nscales))**2)
-    # generate stimuli params for the trial
+# this function creates a uniform distribution centered at 0
+# the purpose is to generate the stimulus parameters used for 
+# creating the 2IFC. The most important thing for reproducibility
+# is to set the seed for random and numpy so that the results are 
+# reproducible
+def generate_stimuli_params(n_trials, n_scales):
+    nparams = sum(6 * 2 * np.power(2, np.arange(n_scales))**2)
     stimuli_params = np.random.uniform(-1, 1, size=(n_trials, nparams))
     return stimuli_params
 
