@@ -38,7 +38,7 @@ def apply_mask(ci: np.ndarray, mask: np.ndarray):
     masked_ci = np.ma.masked_where(mask_matrix == 0, ci)
     return masked_ci
 
-def apply_constant_scaling(ci, constant):
+def apply_constant_scaling(ci: np.ndarray, constant: np.ndarray):
     scaled = (ci + constant) / (2 * constant)
     if np.any((scaled > 1.0) | (scaled < 0)):
         print("Chosen constant value for constant scaling made noise "
@@ -47,7 +47,7 @@ def apply_constant_scaling(ci, constant):
               "will occur.")
     return scaled
 
-def apply_matched_scaling(ci, base):
+def apply_matched_scaling(ci: np.ndarray, base: np.ndarray):
     min_base = np.min(base)
     max_base = np.max(base)
     min_ci = np.min(ci[~np.isnan(ci)])
@@ -55,12 +55,12 @@ def apply_matched_scaling(ci, base):
     scaled = min_base + ((max_base - min_base) * (ci - min_ci) / (max_ci - min_ci))
     return scaled
 
-def apply_independent_scaling(ci):
+def apply_independent_scaling(ci: np.ndarray):
     constant = max(abs(np.nanmin(ci)), abs(np.nanmax(ci)))
     scaled = (ci + constant) / (2 * constant)
     return scaled
 
-def combine(im1, im2):
+def combine(im1: np.ndarray, im2: np.ndarray):
     return (im1 + im2) / 2
 
 ### pipelines
