@@ -64,9 +64,6 @@ def combine(im1: np.ndarray, im2: np.ndarray):
     return (im1 + im2) / 2
 
 ### pipelines
-
-
-# Define a pipeline function that chains multiple image operations
 def default_ci_pipeline(base_image, ci, mask, scaling, scaling_constant):
     if mask is not None:
         ci = apply_mask(ci, mask)
