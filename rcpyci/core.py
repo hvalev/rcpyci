@@ -28,13 +28,13 @@ def compute_ci(base_image: np.ndarray,
                stimuli_params: np.ndarray = None,
                patches: np.ndarray = None,
                patch_idx: np.ndarray = None,
-               pipeline=default_ci_pipeline,
-               pipeline_kwargs=default_pipeline_kwargs,
-               anti_ci=False,
-               n_trials=770,
-               n_scales=5,
-               sigma=5,
-               noise_type='sinusoid'):
+               ci_postproc_pipe: Callable[[Any], Any] = default_ci_pipeline,
+               ci_postproc_kwargs: dict = default_pipeline_kwargs,
+               anti_ci: bool = False,
+               n_trials: int = 770,
+               n_scales: int = 5,
+               sigma: int = 5,
+               noise_type: str = 'sinusoid'):
     assert len(base_image.shape) == 2
     assert base_image.shape[0] == base_image.shape[1]
     img_size = base_image.shape[0]
