@@ -254,61 +254,56 @@ def generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma):
         stimuli[trial,:,:] = noise_pattern
     return stimuli, patches, patch_idx
 
-def generate_stimuli_2IFC(img, n_trials=770, img_size=512, stimulus_path='./stimuli', label='rcic', seed=1, maximize_baseimage_contrast=True, noise_type='sinusoid', n_scales=5, sigma=25, return_as_dataframe=False, save_as_png=True, save_rdata=True):
+def generate_stimuli_2IFC(base_face: np.ndarray,
+                          n_trials:int = 770,
+                          n_scales=5,
+                          sigma=5,
+                          noise_type='sinusoid',
+                          stimulus_path='./stimuli',
+                          label='rcic',
+                          seed=1):
     # Initialize
     np.random.seed(seed)
     random.seed(seed)
     os.makedirs(stimulus_path, exist_ok=True)
-    base_face = img
+    img_size = base_face.shape[0]
+    
     stimuli, patches, patch_idx = generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma)
     for trial in tqdm(range(stimuli.shape[0])):
         trial_adj = trial+1
-        # Scale noise
         stimulus = ((stimuli[trial, :, :] + 0.3) / 0.6)
-        # Add base face
-        combined = (stimulus + base_face) / 2.0
-
+        combined = combine(stimulus, base_face)
         filename_ori = f"{label}_aName_{seed:01d}_{trial_adj:05d}_p_ori.png"
         save_image(combined, "./stimuli/"+filename_ori)
-
-        # Compute inverted stimulus
         stimulus = ((-stimuli[trial, :, :] + 0.3) / 0.6)
-        # Add base face
-        combined = (stimulus + base_face) / 2.0
-
+        combined = combine(stimulus, base_face)
         filename_inv = f"{label}_aName_{seed:01d}_{trial_adj:05d}_p_inv.png"
         save_image(combined, "./stimuli/"+filename_inv)
-    
+
     #TODO get version from package itself
     # generator_version = '0.4.0'
-    if save_rdata:
-        timestamp = datetime.now().strftime("%b_%d_%Y_%H_%M")
-        filename_rdata = f"{label}_seed{seed}_time_{timestamp}"
 
-        np.savez(os.path.join(stimulus_path, filename_rdata), 
-                 patches=patches,
-                 patchIdx=patch_idx,
-                 noise_type=noise_type)
+    timestamp = datetime.now().strftime("%b_%d_%Y_%H_%M")
+    filename_rdata = f"{label}_seed{seed}_time_{timestamp}"
+
+    np.savez(os.path.join(stimulus_path, filename_rdata), 
+                patches=patches,
+                patchIdx=patch_idx,
+                noise_type=noise_type)
     
-    if return_as_dataframe:
-        return stimuli
+    return stimuli
     
 # Usage
 n_trials = 5
 n_scales = 5
 sigma = 25
-# nparams = sum(6 * 2 * np.power(2, np.arange(n_scales))**2)
-# params = np.random.uniform(-1, 1, size=(n_trials, nparams))
 noise_type = 'sinusoid'
-#base_face_files_dict = {'aName': 'base_face.jpg'}
-base_image = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=(noise_type == 'sinusoid'))
-result_python_unconv = generate_stimuli_2IFC(img=base_image,
-                                            n_trials=n_trials, 
-                                            img_size=base_image.shape[0], 
-                                            noise_type=noise_type,
-                                            n_scales=n_scales, 
-                                            sigma=sigma,
-                                            return_as_dataframe=True)
+base_image = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=True)
+result_python_unconv = generate_stimuli_2IFC(base_face=base_image,
+                                             n_trials=n_trials, 
+                                             noise_type=noise_type,
+                                             n_scales=n_scales, 
+                                             sigma=sigma)
 
 print(result_python_unconv.shape)
 
