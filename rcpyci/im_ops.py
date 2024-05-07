@@ -26,7 +26,9 @@ def read_image(filename, grayscale=True, maximize_contrast=True):
     return np.asarray(img)
 
 ### image processing operators
-def apply_mask(ci, mask):
+#TODO mask here needs to already be array, so it's jittable
+#move read_image to the pipeline
+def apply_mask(ci: np.ndarray, mask: np.ndarray):
     if isinstance(mask, str):
         mask_matrix = read_image(mask, grayscale=True)
     elif isinstance(mask, np.ndarray) and mask.ndim == 2:
