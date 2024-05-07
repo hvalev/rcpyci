@@ -1,20 +1,22 @@
+import math
 import os
 import random
-from functools import partial
-import numpy as np
-from PIL import Image
-import jax.numpy as jnp
-from jax import jit
-from tqdm import tqdm
 from datetime import datetime
-from typing import Callable, Any
-import math
-# Functions
-from scipy.stats import norm, ttest_1samp
+from functools import partial
+from typing import Any, Callable
+
+import jax.numpy as jnp
+import numpy as np
+from jax import jit
+from PIL import Image
 from scipy.ndimage import gaussian_filter
 
-from im_ops import save_image, read_image, default_ci_pipeline, combine
+# Functions
+from scipy.stats import norm, ttest_1samp
+from tqdm import tqdm
+
 from consts import default_ci_postprocessing_pipeline_kwargs
+from im_ops import combine, default_ci_pipeline, read_image, save_image
 
 #TODO better function names
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
@@ -138,6 +140,7 @@ def process_ttest_zmap(params, responses, patches, patch_idx, img_size, ci):
     zmap = np.sign(ci) * np.abs(norm.ppf(p_values / 2))
     return zmap
 
+# average out individual responses to create an aggregate ci
 def generate_ci_noise(stimuli, responses, patches, patch_idx):
     weighted = stimuli * responses
     if weighted.ndim == 1:
@@ -295,6 +298,7 @@ def generate_stimuli_2IFC(base_face: np.ndarray,
     
 # Usage
 from consts import default_stimuli_generation_kwargs
+
 base_image = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=True)
 result_python_unconv = generate_stimuli_2IFC(base_face=base_image,
                                              **default_stimuli_generation_kwargs)
@@ -381,5 +385,8 @@ compare_images('/home/hval/rcpyci/cis/python_ci_compared.png','/home/hval/rcpyci
 test = np.load("/home/hval/rcpyci/zmap/zmap_comp.npy")
 if np.array_equal(zmap, test):
     print('ZMAP t.test are equal also')
+elif np.allclose(zmap, test):
+    a = zmap - test
+    print(f'ZMAP t.test are allclose with max {np.max(a)} and min {np.min(a)}')
 else:
     raise KeyError

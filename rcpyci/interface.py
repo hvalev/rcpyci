@@ -6,3 +6,11 @@
 #TODO naming convention for output files
 #TODO for aggregated zmaps
 # aggregated = data.groupby('stimuli')['responses'].mean().reset_index()
+import pandas as pd
+
+
+def generate_stimuli():
+    return
+
+def analyze_data(data: pd.DataFrame):
+    return
