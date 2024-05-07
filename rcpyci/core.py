@@ -52,7 +52,8 @@ def compute_ci(base_image: np.ndarray,
         stimuli_params = -stimuli_params
     
     ci = generate_ci_noise(stimuli_params, responses, patches, patch_idx)
-    combined = pipeline(base_image, ci, **pipeline_kwargs)
+    # combine the base face with the aggregated ci noise image and apply post-processing
+    combined = ci_postproc_pipe(base_image, ci, **ci_postproc_kwargs)
     return ci, combined
 
 def compute_ci_and_zmap(base_image: np.ndarray,
