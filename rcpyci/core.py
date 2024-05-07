@@ -29,7 +29,7 @@ def compute_ci(base_image: np.ndarray,
                patches: np.ndarray = None,
                patch_idx: np.ndarray = None,
                ci_postproc_pipe: Callable[[Any], Any] = default_ci_pipeline,
-               ci_postproc_kwargs: dict = default_pipeline_kwargs,
+               ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
                anti_ci: bool = False,
                n_trials: int = 770,
                n_scales: int = 5,
@@ -61,9 +61,9 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         stimuli_order: np.ndarray = None,
                         stimuli_params: np.ndarray = None,
                         ci_postproc_pipe: Callable[[Any], Any] = default_ci_pipeline,
-                        ci_postproc_kwargs: dict = default_pipeline_kwargs,
+                        ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
                         zmap_pipe: Callable[[Any], Any] = default_ci_pipeline,
-                        zmap_kwargs: dict = default_pipeline_kwargs,
+                        zmap_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
                         anti_ci: bool = False,
                         n_trials: int = 770,
                         n_scales: int = 5,
@@ -297,13 +297,10 @@ def generate_stimuli_2IFC(base_face: np.ndarray,
 from consts import default_stimuli_generation_kwargs
 base_image = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=True)
 result_python_unconv = generate_stimuli_2IFC(base_face=base_image,
-                                             n_trials=n_trials, 
-                                             noise_type=noise_type,
-                                             n_scales=n_scales, 
-                                             sigma=sigma)
+                                             **default_stimuli_generation_kwargs)
 
 print(result_python_unconv.shape)
-
+n_trials = default_stimuli_generation_kwargs['n_trials']
 stimuli = np.arange(n_trials)
 responses = np.ones(shape=(n_trials,1))
 # Define your arguments
@@ -316,13 +313,10 @@ pipeline_kwargs = {
 ci, zmap = compute_ci_and_zmap(base_image=base_image,
                             stimuli_order=stimuli,
                             responses=responses,
-                            n_trials=n_trials,
-                            n_scales=n_scales,
-                            noise_type=noise_type,
+                            **default_stimuli_generation_kwargs,
                             ci_postproc_pipe=default_ci_pipeline,
                             ci_postproc_kwargs=pipeline_kwargs,
                             anti_ci=False,
-                            sigma=sigma,
                             save_ci=True,
                             save_zmap=True,
                             zmap_method='t.test',
