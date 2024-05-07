@@ -14,7 +14,7 @@ from scipy.stats import norm, ttest_1samp
 from scipy.ndimage import gaussian_filter
 
 from im_ops import save_image, read_image, default_ci_pipeline, combine
-from consts import default_pipeline_kwargs
+from consts import default_ci_postprocessing_pipeline_kwargs
 
 #TODO better function names
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
@@ -294,10 +294,7 @@ def generate_stimuli_2IFC(base_face: np.ndarray,
     return stimuli
     
 # Usage
-n_trials = 5
-n_scales = 5
-sigma = 25
-noise_type = 'sinusoid'
+from consts import default_stimuli_generation_kwargs
 base_image = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=True)
 result_python_unconv = generate_stimuli_2IFC(base_face=base_image,
                                              n_trials=n_trials, 
