@@ -27,21 +27,20 @@ def compute_ci(base_image: np.ndarray,
                stimuli_params: np.ndarray = None,
                patches: np.ndarray = None,
                patch_idx: np.ndarray = None,
-               ci_postproc_pipe: Callable[[Any], Any] = default_ci_pipeline,
+               ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
                ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
                anti_ci: bool = False,
                n_trials: int = 770,
                n_scales: int = 5,
                sigma: int = 5,
-               noise_type: str = 'sinusoid'):
-    assert len(base_image.shape) == 2
-    assert base_image.shape[0] == base_image.shape[1]
-    img_size = base_image.shape[0]
+               noise_type: str = 'sinusoid',
+               seed=1):
+    img_size = get_image_size(base_image)
     
     if stimuli_params is None:
-        stimuli_params = generate_stimuli_params(n_trials, n_scales)
+        stimuli_params = __generate_stimuli_params(n_trials, n_scales)
     if patches is None or patch_idx is None:
-        patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+        patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
     if stimuli_order is None:
         stimuli_order = np.arange(0,responses.shape[0]).astype(int)
 
@@ -59,9 +58,9 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         responses: np.ndarray,
                         stimuli_order: np.ndarray = None,
                         stimuli_params: np.ndarray = None,
-                        ci_postproc_pipe: Callable[[Any], Any] = default_ci_pipeline,
+                        ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
                         ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
-                        zmap_pipe: Callable[[Any], Any] = default_ci_pipeline,
+                        zmap_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
                         zmap_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
                         anti_ci: bool = False,
                         n_trials: int = 770,
@@ -73,13 +72,12 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         zmap_method='t.test',
                         threshold=3,
                         zmaptargetpath='./zmaps',
-                        label='experiment'):
-    assert len(base_image.shape) == 2
-    assert base_image.shape[0] == base_image.shape[1]
-    img_size = base_image.shape[0]
+                        label='experiment',
+                        seed=1):
+    img_size = get_image_size(base_image)
     # Load parameter file (created when generating stimuli)
-    stimuli_params = generate_stimuli_params(n_trials, n_scales)
-    patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+    stimuli_params = __generate_stimuli_params(n_trials, n_scales)
+    patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
 
     ci, combined = compute_ci(base_image = base_image,
                     responses = responses,
@@ -93,7 +91,8 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                     n_trials= n_trials,
                     n_scales= n_scales,
                     sigma = sigma,
-                    noise_type = noise_type)
+                    noise_type = noise_type,
+                    seed = seed)
     
 
     filename = ''
@@ -128,12 +127,9 @@ def process_ttest_zmap(params, responses, patches, patch_idx, img_size, ci):
     weighted_parameters = params * responses
     n_observations = len(responses)
     noise_images = np.zeros((img_size, img_size, n_observations))
-    # For each observation, generate noise image
     for obs in range(n_observations):
-        noise_images[:, :, obs] = generate_noise_image(weighted_parameters[obs], patches, patch_idx)
-    # Apply t-test along the observation axis directly
+        noise_images[:, :, obs] = __generate_noise_image(weighted_parameters[obs], patches, patch_idx)
     t_stat, p_values = ttest_1samp(noise_images, popmean=0, axis=2)
-    # Create Z-map
     zmap = np.sign(ci) * np.abs(norm.ppf(p_values / 2))
     return zmap
 
@@ -144,14 +140,13 @@ def generate_ci_noise(stimuli, responses, patches, patch_idx):
         params = weighted
     else:
         params = weighted.mean(axis=0)
-    return generate_noise_image(params, patches, patch_idx)
+    return __generate_noise_image(params, patches, patch_idx)
 
 #TODO This is jittable and equivalent with jnp equivalent
-#TODO it doesn't play nice with saving images
 #@jit
-def generate_noise_image(params, patches, patchIdx):
+def __generate_noise_image(params, patches, patch_idx):
     # we need to convert to int and subtract 1 to make it 0-indexed
-    patch_indices = patchIdx.astype(int)
+    patch_indices = patch_idx.astype(int)
     pd = patches.shape
     patch_params = np.array(params[patch_indices]).reshape(pd)
     reshaped_matrix = (patches * patch_params).reshape((pd[0]*pd[1], pd[2]))
@@ -159,22 +154,22 @@ def generate_noise_image(params, patches, patchIdx):
     return noise
 
 #TODO better name
-def generate_meshgrid(cycles, patch_size):
+def __generate_coordinate_meshgrid_for_patch(cycles, patch_size):
     x = np.linspace(0, cycles, patch_size)
     y = np.linspace(0, cycles, patch_size)
     X, Y = np.meshgrid(x, y)
     return X, Y
 
-def generate_sinusoid(patch_size: int, cycles: float, angle: float, phase: float, contrast: float):
-    X, Y = generate_meshgrid(cycles, patch_size)
+def __generate_sinusoid(patch_size: int, cycles: float, angle: float, phase: float, contrast: float):
+    X, Y = __generate_coordinate_meshgrid_for_patch(cycles, patch_size)
     angle = math.radians(angle)
     sinepatch = X * math.cos(angle) + Y * math.sin(angle)
     sinusoid = (sinepatch * 2 * math.pi) + phase
     sinusoid = contrast * np.sin(sinusoid)
     return sinusoid
 
-def generate_gabor(patch_size, cycles, angle, phase, sigma, contrast):
-    sinusoid = generate_sinusoid(patch_size, cycles, angle, phase, contrast)
+def __generate_gabor(patch_size, cycles, angle, phase, sigma, contrast):
+    sinusoid = __generate_sinusoid(patch_size, cycles, angle, phase, contrast)
     x0 = np.linspace(-0.5, 0.5, patch_size)
     X, Y = np.meshgrid(x0, x0)
     gauss_mask = np.exp(-((X ** 2 + Y ** 2) / (2 * (sigma / patch_size) ** 2)))
@@ -182,34 +177,25 @@ def generate_gabor(patch_size, cycles, angle, phase, sigma, contrast):
     return gabor
 
 @partial(jit, static_argnames=['img_size'])
-def generate_scales(img_size:int = 512):
+def __generate_scales(img_size:int = 512):
     x, y = jnp.meshgrid(jnp.arange(start=1, stop=img_size+1, step=1), jnp.arange(start=1, stop=img_size+1, step=1))
-    patch_size = x / y
-    #TODO scales will be integers, so make sure to check that all are integer convertible
-    #and then actually convert it to integers.
-    patch_size_int = np.round(patch_size).astype(int)
+    patch_size_int = jnp.round(x / y).astype(int)
     return patch_size_int
 
-def generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', sigma=25):
-    #TODO move those to variables
-    # Settings of sinusoids
+def __generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', sigma=25):
     orientations = np.array([0, 30, 60, 90, 120, 150])
     phases = np.array([0, np.pi/2])
     scales = 2 ** np.arange(n_scales)
     assert scales.dtype == np.int64
 
-    # Size of patches per scale
-    patch_sizes = generate_scales(img_size=img_size)
-
-    # Number of patch layers needed
+    patch_sizes = __generate_scales(img_size=img_size)
     nr_patches = len(scales) * len(orientations) * len(phases)
 
-    # Allocate memory
     patches = np.zeros((img_size, img_size, nr_patches))
     patch_idx = np.zeros((img_size, img_size, nr_patches))
 
-    co = 0  # patch layer counter
-    idx = 0  # contrast index counter
+    co = 0
+    idx = 0
 
     for scale in scales:
         # iterate over each scale (i.e. 512, 256, 128, 64, 32)
@@ -217,20 +203,16 @@ def generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', sigm
         for orientation in orientations:
             for phase in phases:
                 if noise_type == 'gabor':
-                    p = generate_gabor(patch, 1.5, orientation, phase, sigma, 1)
+                    p = __generate_gabor(patch, 1.5, orientation, phase, sigma, 1)
                 else:
-                    # img_size, cycles, angle, phase, contrast
-                    p = generate_sinusoid(patch, 2, orientation, phase, 1)
+                    p = __generate_sinusoid(patch, 2, orientation, phase, 1)
                 # Repeat to fill scale
                 patches[:, :, co - 1] = np.tile(p, (scale, scale))
-                # Create index matrix
                 for col in range(1, scale + 1):
                     for row in range(1, scale + 1):
-                        # Insert absolute index for later contrast weighting
                         patch_idx[patch * (row - 1) : patch * row, patch * (col - 1):patch * col, co - 1] = idx
                         # Update contrast counter
                         idx += 1
-                # Update layer counter
                 co += 1
     return patches, patch_idx
 
@@ -239,62 +221,64 @@ def generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', sigm
 # creating the 2IFC. The most important thing for reproducibility
 # is to set the seed for random and numpy so that the results are 
 # reproducible
-def generate_stimuli_params(n_trials, n_scales):
+def __generate_stimuli_params(n_trials: int, n_scales: int, seed: int = 1):
     nparams = sum(6 * 2 * np.power(2, np.arange(n_scales))**2)
     stimuli_params = np.random.uniform(-1, 1, size=(n_trials, nparams))
     return stimuli_params
 
-def generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma):
-    stimuli_params = generate_stimuli_params(n_trials, n_scales)
+def __generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma):
+    stimuli_params = __generate_stimuli_params(n_trials, n_scales)
     stimuli = np.zeros((n_trials, img_size, img_size))
-    patches, patch_idx = generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+    patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
     for trial in tqdm(range(n_trials)):
         params = stimuli_params[trial]
-        noise_pattern = generate_noise_image(params, patches, patch_idx)
+        noise_pattern = __generate_noise_image(params, patches, patch_idx)
         stimuli[trial,:,:] = noise_pattern
-    return stimuli, patches, patch_idx
+    return stimuli
+
+def __generate_stimulus_image(stimulus, base_face):
+    stimulus = (stimulus + 0.3) / 0.6
+    return combine(stimulus, base_face)
 
 def generate_stimuli_2IFC(base_face: np.ndarray,
                           n_trials:int = 770,
-                          n_scales=5,
-                          sigma=5,
-                          noise_type='sinusoid',
-                          stimulus_path='./stimuli',
-                          label='rcic',
+                          n_scales:int=5,
+                          sigma:int=5,
+                          noise_type:str='sinusoid',
+                          save_path:str='./stimuli',
+                          label='rcpyci',
                           seed=1):
-    # Initialize
     np.random.seed(seed)
     random.seed(seed)
-    os.makedirs(stimulus_path, exist_ok=True)
-    img_size = base_face.shape[0]
-    
-    stimuli, patches, patch_idx = generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma)
-    for trial in tqdm(range(stimuli.shape[0])):
-        trial_adj = trial+1
-        stimulus = ((stimuli[trial, :, :] + 0.3) / 0.6)
-        combined = combine(stimulus, base_face)
-        filename_ori = f"{label}_aName_{seed:01d}_{trial_adj:05d}_p_ori.png"
-        save_image(combined, "./stimuli/"+filename_ori)
-        stimulus = ((-stimuli[trial, :, :] + 0.3) / 0.6)
-        combined = combine(stimulus, base_face)
-        filename_inv = f"{label}_aName_{seed:01d}_{trial_adj:05d}_p_inv.png"
-        save_image(combined, "./stimuli/"+filename_inv)
+    os.makedirs(save_path, exist_ok=True)
+    img_size = get_image_size(base_face)
 
-    #TODO get version from package itself
-    # generator_version = '0.4.0'
+    stimuli = __generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma)
+    assert n_trials == stimuli.shape[0]
+
+    for trial in tqdm(range(0,n_trials)):
+        stimulus = __generate_stimulus_image(stimuli[trial, :, :], base_face)
+        filename_ori = f"stimulus_{label}_seed_{seed}_trial_{trial:0{len(str(n_trials))}d}_ori.png"
+        save_image(stimulus, os.path.join(save_path,filename_ori))
+        stimulus_inverted = __generate_stimulus_image(-stimuli[trial, :, :], base_face)
+        filename_inv = f"stimulus_{label}_seed_{seed}_trial_{trial:0{len(str(n_trials))}d}_inv.png"
+        save_image(stimulus_inverted, os.path.join(save_path,filename_inv))
 
     timestamp = datetime.now().strftime("%b_%d_%Y_%H_%M")
-    filename_rdata = f"{label}_seed{seed}_time_{timestamp}"
-
-    np.savez(os.path.join(stimulus_path, filename_rdata), 
-                patches=patches,
-                patchIdx=patch_idx,
-                noise_type=noise_type)
-    
+    data = f"data_{label}_seed_{seed}_time_{timestamp}"
+    np.savez(os.path.join(save_path, data), 
+             base_face=base_face,
+             n_trials=n_trials,
+             n_scales=n_scales,
+             sigma=sigma,
+             noise_type=noise_type,
+             save_path=save_path,
+             label=label,
+             seed=seed)
     return stimuli
-    
+
 # Usage
-from consts import default_stimuli_generation_kwargs
+from pipelines import default_stimuli_generation_kwargs
 
 base_image = read_image(os.getcwd()+"/rcpyci/"+"base_face.jpg", grayscale=True)
 result_python_unconv = generate_stimuli_2IFC(base_face=base_image,
@@ -315,7 +299,7 @@ ci, zmap = compute_ci_and_zmap(base_image=base_image,
                             stimuli_order=stimuli,
                             responses=responses,
                             **default_stimuli_generation_kwargs,
-                            ci_postproc_pipe=default_ci_pipeline,
+                            ci_postproc_pipe=ci_postprocessing_pipeline,
                             ci_postproc_kwargs=pipeline_kwargs,
                             anti_ci=False,
                             save_ci=True,
