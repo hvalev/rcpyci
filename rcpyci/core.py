@@ -7,16 +7,13 @@ from typing import Any, Callable
 
 import jax.numpy as jnp
 import numpy as np
+from im_ops import combine, get_image_size, read_image, save_image
 from jax import jit
 from PIL import Image
+from pipelines import ci_postprocessing_pipeline, default_ci_postprocessing_pipeline_kwargs
 from scipy.ndimage import gaussian_filter
-
-# Functions
 from scipy.stats import norm, ttest_1samp
 from tqdm import tqdm
-
-from consts import default_ci_postprocessing_pipeline_kwargs
-from im_ops import combine, default_ci_pipeline, read_image, save_image
 
 #TODO better function names
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
