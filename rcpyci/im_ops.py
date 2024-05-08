@@ -27,6 +27,11 @@ def read_image(filename, grayscale=True, maximize_contrast=True):
     return np.asarray(img)
 
 ### image processing operators
+def get_image_size(image):
+    assert len(image.shape) == 2
+    assert image.shape[0] == image.shape[1]
+    return image.shape[0]
+
 #TODO mask here needs to already be array, so it's jittable
 #move read_image to the pipeline
 def apply_mask(ci: np.ndarray, mask: np.ndarray):
@@ -63,22 +68,3 @@ def apply_independent_scaling(ci: np.ndarray):
 
 def combine(im1: np.ndarray, im2: np.ndarray):
     return (im1 + im2) / 2
-
-### pipelines
-def default_ci_pipeline(base_image, ci, mask, scaling, scaling_constant):
-    if mask is not None:
-        ci = apply_mask(ci, mask)
-    scaled = apply_independent_scaling(ci)
-    if scaling == 'independent':
-        scaled = apply_independent_scaling(ci)
-    elif scaling == 'constant':
-        scaled = apply_constant_scaling(ci, scaling_constant)
-    combined = combine(base_image, scaled)
-    return combined
-
-# JIT compile the pipeline function for performance
-# jit_image_pipeline = jit(default_ci_pipeline)
-# a = jit_image_pipeline
-
-# Now you can use the compiled function on your image data
-#processed_image = jit_image_pipeline(input_image)
