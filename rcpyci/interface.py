@@ -1,3 +1,7 @@
+"""
+File Name: interface.py
+Description: TBD
+"""
 #TODO data validation (input and output numpy arrays and their dtypes)
 #TODO single output per function (besides cache)
 #TODO find optimal parameters for CPU/GPU processing with jax based on input image parameters

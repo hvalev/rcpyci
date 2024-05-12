@@ -1,3 +1,7 @@
+"""
+File Name: core.py
+Description: TBD
+"""
 import math
 import os
 import random

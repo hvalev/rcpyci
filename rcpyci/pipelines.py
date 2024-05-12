@@ -1,7 +1,11 @@
-
-### file for containing standard values for certain functions
-
-from im_ops import apply_constant_scaling, apply_independent_scaling, apply_mask, combine
+"""
+File Name: pipelines.py
+Description: TBD
+"""
+import numpy as np
+from im_ops import apply_constant_scaling, apply_independent_scaling, apply_mask, combine, get_image_size
+from scipy.ndimage import gaussian_filter
+from scipy.stats import norm, ttest_1samp
 
 # default values for generating stimuli
 default_stimuli_generation_kwargs = {
