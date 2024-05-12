@@ -19,7 +19,6 @@ from tqdm import tqdm
 
 def compute_ci(base_image: np.ndarray,
                responses: np.ndarray,
-               stimuli_order: np.ndarray = None,
                stimuli_params: np.ndarray = None,
                patches: np.ndarray = None,
                patch_idx: np.ndarray = None,
@@ -37,11 +36,7 @@ def compute_ci(base_image: np.ndarray,
         stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
     if patches is None or patch_idx is None:
         patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
-    if stimuli_order is None:
-        stimuli_order = np.arange(0,responses.shape[0]).astype(int)
 
-    # reorder stimuli params based on the selection order
-    stimuli_params = stimuli_params[stimuli_order]
     if anti_ci:
         stimuli_params = -stimuli_params
     
@@ -52,7 +47,6 @@ def compute_ci(base_image: np.ndarray,
 
 def compute_ci_and_zmap(base_image: np.ndarray,
                         responses: np.ndarray,
-                        stimuli_order: np.ndarray = None,
                         stimuli_params: np.ndarray = None,
                         ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
                         ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
@@ -71,7 +65,6 @@ def compute_ci_and_zmap(base_image: np.ndarray,
 
     ci, combined = compute_ci(base_image = base_image,
                               responses = responses,
-                              stimuli_order = stimuli_order,
                               stimuli_params = stimuli_params,
                               patches = patches,
                               patch_idx= patch_idx,
