@@ -1,18 +1,13 @@
 """
 File Name: core.py
-Description: TBD
+Description: object to object part of the library, for any interaction and interfacing with files, check interface.py
 """
 import math
-import os
 import random
-from datetime import datetime
-from functools import partial
 from typing import Any, Callable
 
-#import jax.numpy as jnp
 import numpy as np
-from im_ops import combine, get_image_size, save_image
-#from jax import jit
+from im_ops import combine, get_image_size
 from pipelines import (
     ci_postprocessing_pipeline,
     compute_zmap_ttest_pipeline,
@@ -21,7 +16,6 @@ from pipelines import (
 )
 from tqdm import tqdm
 
-#TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
 #TODO clean up interfaces (filepath not needed)
 #TODO add logging
 
@@ -71,10 +65,6 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         n_scales: int = 5,
                         sigma: int = 5,
                         noise_type: str = 'sinusoid',
-                        save_ci: bool = True,
-                        save_zmap: bool = True,
-                        path: str = './zmaps',
-                        label: str = 'experiment',
                         seed: int = 1):
     img_size = get_image_size(base_image)
     # Load parameter file (created when generating stimuli)
@@ -96,24 +86,13 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                               noise_type = noise_type,
                               seed = seed)
     
-
-    filename = ''
-    if anti_ci:
-        filename += 'antici_' + label + ".png"
-        stimuli_params = -stimuli_params
-    else:
-        filename += 'ci_' + label + ".png"
-
-    if save_ci:
-        save_image(image=combined, path='/home/hval/rcpyci/cis/'+filename)
-
     zmap = None
-    if save_zmap:
+    if zmap_pipe is not None:
+        if anti_ci:        
+            stimuli_params = -stimuli_params
         zmap = zmap_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, **zmap_kwargs)
-        np.save("/home/hval/rcpyci/zmap/zmap.npy", zmap)
-    #del stimuli_params, responses, patches, patch_idx
 
-    return ci, zmap
+    return ci, combined, zmap
 
 # average out individual responses to create an aggregate ci
 def __generate_ci_noise(stimuli, responses, patches, patch_idx):
@@ -124,7 +103,6 @@ def __generate_ci_noise(stimuli, responses, patches, patch_idx):
         params = weighted.mean(axis=0)
     return __generate_individual_noise_stimulus(params, patches, patch_idx)
 
-#@jit
 def __generate_individual_noise_stimulus(params, patches, patch_idx):
     # we need to convert to int and subtract 1 to make it 0-indexed
     patch_indices = patch_idx.astype(int)
@@ -156,7 +134,6 @@ def __generate_gabor(patch_size, cycles, angle, phase, sigma, contrast):
     gabor = gauss_mask * sinusoid
     return gabor
 
-#@partial(jit, static_argnames=['img_size'])
 def __generate_scales(img_size:int = 512):
     x, y = np.meshgrid(np.arange(start=1, stop=img_size+1, step=1), np.arange(start=1, stop=img_size+1, step=1))
     patch_size_int = np.round(x / y).astype(int)
@@ -226,32 +203,16 @@ def generate_stimuli_2IFC(base_face: np.ndarray,
                           n_scales:int=5,
                           sigma:int=5,
                           noise_type:str='sinusoid',
-                          save_path:str='./stimuli',
-                          label='rcpyci',
                           seed=1):
-    os.makedirs(save_path, exist_ok=True)
     img_size = get_image_size(base_face)
 
     stimuli = __generate_all_noise_stimuli(n_trials, n_scales, img_size, noise_type, sigma, seed)
     assert n_trials == stimuli.shape[0]
-
+    stimuli_ori = []
+    stimuli_inv = []
     for trial in tqdm(range(0,n_trials)):
         stimulus = __generate_stimulus_image(stimuli[trial, :, :], base_face)
-        filename_ori = f"stimulus_{label}_seed_{seed}_trial_{trial:0{len(str(n_trials))}d}_ori.png"
-        save_image(stimulus, os.path.join(save_path,filename_ori))
         stimulus_inverted = __generate_stimulus_image(-stimuli[trial, :, :], base_face)
-        filename_inv = f"stimulus_{label}_seed_{seed}_trial_{trial:0{len(str(n_trials))}d}_inv.png"
-        save_image(stimulus_inverted, os.path.join(save_path,filename_inv))
-
-    timestamp = datetime.now().strftime("%b_%d_%Y_%H_%M")
-    data = f"data_{label}_seed_{seed}_time_{timestamp}"
-    np.savez(os.path.join(save_path, data), 
-             base_face=base_face,
-             n_trials=n_trials,
-             n_scales=n_scales,
-             sigma=sigma,
-             noise_type=noise_type,
-             save_path=save_path,
-             label=label,
-             seed=seed)
-    return stimuli
+        stimuli_ori.append(stimulus)
+        stimuli_inv.append(stimulus_inverted)
+    return stimuli_ori, stimuli_inv
