@@ -16,8 +16,6 @@ from pipelines import (
 )
 from tqdm import tqdm
 
-#TODO clean up interfaces (filepath not needed)
-#TODO add logging
 
 def compute_ci(base_image: np.ndarray,
                responses: np.ndarray,
@@ -32,7 +30,7 @@ def compute_ci(base_image: np.ndarray,
                n_scales: int = 5,
                sigma: int = 5,
                noise_type: str = 'sinusoid',
-               seed=1):
+               seed: int = 1):
     img_size = get_image_size(base_image)
     
     if stimuli_params is None:
@@ -199,11 +197,11 @@ def __generate_stimulus_image(stimulus, base_face):
     return combine(stimulus, base_face)
 
 def generate_stimuli_2IFC(base_face: np.ndarray,
-                          n_trials:int = 770,
-                          n_scales:int=5,
-                          sigma:int=5,
-                          noise_type:str='sinusoid',
-                          seed=1):
+                          n_trials: int = 770,
+                          n_scales: int = 5,
+                          sigma: int = 5,
+                          noise_type: str = 'sinusoid',
+                          seed: int = 1):
     img_size = get_image_size(base_face)
 
     stimuli = __generate_all_noise_stimuli(n_trials, n_scales, img_size, noise_type, sigma, seed)
