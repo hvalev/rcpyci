@@ -222,10 +222,12 @@ def __generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', si
 
 # this function creates a uniform distribution centered at 0
 # the purpose is to generate the stimulus parameters used for 
-# creating the 2IFC. The most important thing for reproducibility
-# is to set the seed for random and numpy so that the results are 
-# reproducible
+# creating the 2IFC. It is important to set the seed for both random and numpy explicitly here
+# to ensure reproducibility between experiments. This would generate the same
+# parameters for generating stimuli and recreate those for creating the ci
 def __generate_stimuli_params(n_trials: int, n_scales: int, seed: int = 1):
+    np.random.seed(seed)
+    random.seed(seed)
     nparams = sum(6 * 2 * np.power(2, np.arange(n_scales))**2)
     stimuli_params = np.random.uniform(-1, 1, size=(n_trials, nparams))
     return stimuli_params
