@@ -42,7 +42,7 @@ def compute_ci(base_image: np.ndarray,
     img_size = get_image_size(base_image)
     
     if stimuli_params is None:
-        stimuli_params = __generate_stimuli_params(n_trials, n_scales)
+        stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
     if patches is None or patch_idx is None:
         patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
     if stimuli_order is None:
@@ -53,7 +53,7 @@ def compute_ci(base_image: np.ndarray,
     if anti_ci:
         stimuli_params = -stimuli_params
     
-    ci = generate_ci_noise(stimuli_params, responses, patches, patch_idx)
+    ci = __generate_ci_noise(stimuli_params, responses, patches, patch_idx)
     # combine the base face with the aggregated ci noise image and apply post-processing
     combined = ci_postproc_pipe(base_image, ci, **ci_postproc_kwargs)
     return ci, combined
@@ -80,8 +80,8 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         seed=1):
     img_size = get_image_size(base_image)
     # Load parameter file (created when generating stimuli)
-    stimuli_params = __generate_stimuli_params(n_trials, n_scales)
-    patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+    stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
+    patches, patch_idx = __generate_noise_pattern(img_size=img_size, n_scales=n_scales, noise_type=noise_type, sigma=sigma)
 
     ci, combined = compute_ci(base_image = base_image,
                     responses = responses,
@@ -138,17 +138,17 @@ def process_ttest_zmap(params, responses, patches, patch_idx, img_size, ci):
     return zmap
 
 # average out individual responses to create an aggregate ci
-def generate_ci_noise(stimuli, responses, patches, patch_idx):
+def __generate_ci_noise(stimuli, responses, patches, patch_idx):
     weighted = stimuli * responses
     if weighted.ndim == 1:
         params = weighted
     else:
         params = weighted.mean(axis=0)
-    return __generate_noise_image(params, patches, patch_idx)
+    return __generate_individual_noise_stimulus(params, patches, patch_idx)
 
 #TODO This is jittable and equivalent with jnp equivalent
 #@jit
-def __generate_noise_image(params, patches, patch_idx):
+def __generate_individual_noise_stimulus(params, patches, patch_idx):
     # we need to convert to int and subtract 1 to make it 0-indexed
     patch_indices = patch_idx.astype(int)
     pd = patches.shape
@@ -232,14 +232,13 @@ def __generate_stimuli_params(n_trials: int, n_scales: int, seed: int = 1):
     stimuli_params = np.random.uniform(-1, 1, size=(n_trials, nparams))
     return stimuli_params
 
-def __generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma):
-    stimuli_params = __generate_stimuli_params(n_trials, n_scales)
+def __generate_all_noise_stimuli(n_trials, n_scales, img_size, noise_type, sigma, seed):
+    stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed)
     stimuli = np.zeros((n_trials, img_size, img_size))
     patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
     for trial in tqdm(range(n_trials)):
         params = stimuli_params[trial]
-        noise_pattern = __generate_noise_image(params, patches, patch_idx)
-        stimuli[trial,:,:] = noise_pattern
+        stimuli[trial,:,:] = __generate_individual_noise_stimulus(params, patches, patch_idx)
     return stimuli
 
 def __generate_stimulus_image(stimulus, base_face):
@@ -254,12 +253,10 @@ def generate_stimuli_2IFC(base_face: np.ndarray,
                           save_path:str='./stimuli',
                           label='rcpyci',
                           seed=1):
-    np.random.seed(seed)
-    random.seed(seed)
     os.makedirs(save_path, exist_ok=True)
     img_size = get_image_size(base_face)
 
-    stimuli = __generate_stimuli_noise(n_trials, n_scales, img_size, noise_type, sigma)
+    stimuli = __generate_all_noise_stimuli(n_trials, n_scales, img_size, noise_type, sigma, seed)
     assert n_trials == stimuli.shape[0]
 
     for trial in tqdm(range(0,n_trials)):
