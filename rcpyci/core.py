@@ -9,22 +9,22 @@ from datetime import datetime
 from functools import partial
 from typing import Any, Callable
 
-import jax.numpy as jnp
+#import jax.numpy as jnp
 import numpy as np
-from im_ops import combine, get_image_size, read_image, save_image
-from jax import jit
-from PIL import Image
-from pipelines import ci_postprocessing_pipeline, default_ci_postprocessing_pipeline_kwargs
-from scipy.ndimage import gaussian_filter
-from scipy.stats import norm, ttest_1samp
+from im_ops import combine, get_image_size, save_image
+#from jax import jit
+from pipelines import (
+    ci_postprocessing_pipeline,
+    compute_zmap_ttest_pipeline,
+    default_ci_postprocessing_pipeline_kwargs,
+    default_compute_zmap_ttest_pipeline_kwargs,
+)
 from tqdm import tqdm
 
-#TODO better function names
 #TODO fix stimuli and params to stimuli be indices and params the params (fixed already?)
 #TODO clean up interfaces (filepath not needed)
 #TODO add logging
-#TODO make sure there is a global way to set seed
-    
+
 def compute_ci(base_image: np.ndarray,
                responses: np.ndarray,
                stimuli_order: np.ndarray = None,
@@ -55,7 +55,7 @@ def compute_ci(base_image: np.ndarray,
     
     ci = __generate_ci_noise(stimuli_params, responses, patches, patch_idx)
     # combine the base face with the aggregated ci noise image and apply post-processing
-    combined = ci_postproc_pipe(base_image, ci, **ci_postproc_kwargs)
+    combined = ci_postproc_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, **ci_postproc_kwargs)
     return ci, combined
 
 def compute_ci_and_zmap(base_image: np.ndarray,
@@ -64,39 +64,37 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         stimuli_params: np.ndarray = None,
                         ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
                         ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
-                        zmap_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                        zmap_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
+                        zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
+                        zmap_kwargs: dict = default_compute_zmap_ttest_pipeline_kwargs,
                         anti_ci: bool = False,
                         n_trials: int = 770,
                         n_scales: int = 5,
-                        sigma:int = 5,
-                        noise_type='sinusoid',
-                        save_ci=True,
-                        save_zmap=True,
-                        zmap_method='t.test',
-                        threshold=3,
-                        zmaptargetpath='./zmaps',
-                        label='experiment',
-                        seed=1):
+                        sigma: int = 5,
+                        noise_type: str = 'sinusoid',
+                        save_ci: bool = True,
+                        save_zmap: bool = True,
+                        path: str = './zmaps',
+                        label: str = 'experiment',
+                        seed: int = 1):
     img_size = get_image_size(base_image)
     # Load parameter file (created when generating stimuli)
     stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
     patches, patch_idx = __generate_noise_pattern(img_size=img_size, n_scales=n_scales, noise_type=noise_type, sigma=sigma)
 
     ci, combined = compute_ci(base_image = base_image,
-                    responses = responses,
-                    stimuli_order = stimuli_order,
-                    stimuli_params = stimuli_params,
-                    patches = patches,
-                    patch_idx= patch_idx,
-                    ci_postproc_pipe = ci_postproc_pipe,
-                    ci_postproc_kwargs = ci_postproc_kwargs,
-                    anti_ci = anti_ci,
-                    n_trials= n_trials,
-                    n_scales= n_scales,
-                    sigma = sigma,
-                    noise_type = noise_type,
-                    seed = seed)
+                              responses = responses,
+                              stimuli_order = stimuli_order,
+                              stimuli_params = stimuli_params,
+                              patches = patches,
+                              patch_idx= patch_idx,
+                              ci_postproc_pipe = ci_postproc_pipe,
+                              ci_postproc_kwargs = ci_postproc_kwargs,
+                              anti_ci = anti_ci,
+                              n_trials= n_trials,
+                              n_scales= n_scales,
+                              sigma = sigma,
+                              noise_type = noise_type,
+                              seed = seed)
     
 
     filename = ''
@@ -111,31 +109,11 @@ def compute_ci_and_zmap(base_image: np.ndarray,
 
     zmap = None
     if save_zmap:
-        if zmap_method == 'quick':
-            zmap = process_quick_zmap(ci, sigma, threshold)
-        elif zmap_method == 't.test':
-            zmap = process_ttest_zmap(stimuli_params, responses, patches, patch_idx, img_size, ci)
-            #TODO remove this and pull the save in the aggregated function
-            np.save("/home/hval/rcpyci/zmap/zmap.npy", zmap)
-        else:
-            raise ValueError(f"Invalid zmap method: {zmap_method}")
+        zmap = zmap_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, **zmap_kwargs)
+        np.save("/home/hval/rcpyci/zmap/zmap.npy", zmap)
+    #del stimuli_params, responses, patches, patch_idx
+
     return ci, zmap
-
-def process_quick_zmap(ci, sigma, threshold):
-    blurred_ci = gaussian_filter(ci, sigma=sigma, mode='constant', cval=0)
-    zmap = (blurred_ci - np.mean(blurred_ci)) / np.std(blurred_ci)
-    zmap[(zmap > -threshold) & (zmap < threshold)] = np.nan
-    return zmap
-
-def process_ttest_zmap(params, responses, patches, patch_idx, img_size, ci):
-    weighted_parameters = params * responses
-    n_observations = len(responses)
-    noise_images = np.zeros((img_size, img_size, n_observations))
-    for obs in range(n_observations):
-        noise_images[:, :, obs] = __generate_noise_image(weighted_parameters[obs], patches, patch_idx)
-    t_stat, p_values = ttest_1samp(noise_images, popmean=0, axis=2)
-    zmap = np.sign(ci) * np.abs(norm.ppf(p_values / 2))
-    return zmap
 
 # average out individual responses to create an aggregate ci
 def __generate_ci_noise(stimuli, responses, patches, patch_idx):
@@ -146,7 +124,6 @@ def __generate_ci_noise(stimuli, responses, patches, patch_idx):
         params = weighted.mean(axis=0)
     return __generate_individual_noise_stimulus(params, patches, patch_idx)
 
-#TODO This is jittable and equivalent with jnp equivalent
 #@jit
 def __generate_individual_noise_stimulus(params, patches, patch_idx):
     # we need to convert to int and subtract 1 to make it 0-indexed
@@ -157,7 +134,6 @@ def __generate_individual_noise_stimulus(params, patches, patch_idx):
     noise = np.mean(reshaped_matrix, axis=1).reshape(pd[0:2])
     return noise
 
-#TODO better name
 def __generate_coordinate_meshgrid_for_patch(cycles, patch_size):
     x = np.linspace(0, cycles, patch_size)
     y = np.linspace(0, cycles, patch_size)
@@ -180,10 +156,10 @@ def __generate_gabor(patch_size, cycles, angle, phase, sigma, contrast):
     gabor = gauss_mask * sinusoid
     return gabor
 
-@partial(jit, static_argnames=['img_size'])
+#@partial(jit, static_argnames=['img_size'])
 def __generate_scales(img_size:int = 512):
-    x, y = jnp.meshgrid(jnp.arange(start=1, stop=img_size+1, step=1), jnp.arange(start=1, stop=img_size+1, step=1))
-    patch_size_int = jnp.round(x / y).astype(int)
+    x, y = np.meshgrid(np.arange(start=1, stop=img_size+1, step=1), np.arange(start=1, stop=img_size+1, step=1))
+    patch_size_int = np.round(x / y).astype(int)
     return patch_size_int
 
 def __generate_noise_pattern(img_size=512, n_scales=5, noise_type='sinusoid', sigma=25):

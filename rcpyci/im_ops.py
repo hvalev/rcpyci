@@ -10,7 +10,7 @@ from PIL import Image
 
 ### save/load image operations
 # this function saves an unscaled [0,1] numpy array to an image
-def save_image(image, path, clip=True, scale=True, save_npy=False):
+def save_image(image: np.array, path, clip=True, scale=True, save_npy=False):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if save_npy:
         npy_path = os.path.splitext(path)[0] + ".npy"
