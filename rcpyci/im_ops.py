@@ -14,7 +14,7 @@ def save_image(image: np.array, path, clip=True, scale=True, save_npy=False):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if save_npy:
         npy_path = os.path.splitext(path)[0] + ".npy"
-        np.save(npy_path)
+        np.save(npy_path, image)
     if clip:
         image = np.clip(image, 0, 1)
     if scale:
