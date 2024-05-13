@@ -10,6 +10,45 @@ import pandas as pd
 from PIL import Image
 from functools import wraps
 
+def skip_if_exist(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # set both to true
+        ci_exists = True
+        zmap_exists = True
+
+        nameplate = ''
+        # are we computing participant-level cis and zmaps or condition-level cis
+        if 'participant' in kwargs.keys():
+            nameplate = kwargs['participant']
+        elif 'condition' in kwargs.keys():
+            nameplate = kwargs['condition']
+        else:
+            return func(*args, **kwargs)
+
+        # Check if ci and zmap files exist
+        ci_filename = f"ci_{kwargs['label']}_{nameplate}.png"
+        if kwargs['anti_ci']:
+            ci_filename = f"antici_{kwargs['label']}_{nameplate}.png"
+        
+        zmap_filename = f"zmap_{kwargs['label']}_{nameplate}.png"
+
+        if kwargs['save_ci'] and not os.path.exists(os.path.join(kwargs['experiment_path'], "ci", ci_filename)):
+            ci_exists = False
+            #save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
+        if kwargs['save_zmap'] and not os.path.exists(os.path.join(kwargs['experiment_path'], "zmap", zmap_filename)):
+            zmap_exists = False
+            #save_image(image=zmap, path=os.path.join(experiment_path, "zmap", zmap_filename), save_npy=True)
+        
+        # If both files exist, skip computation
+        if ci_exists and zmap_exists:
+            print(f"Skipping computation for participant/condition {nameplate}: ci and zmap files already exist.")
+            return nameplate, None, None, None
+        
+        # Otherwise, proceed with the original function
+        return func(*args, **kwargs)
+    
+    return wrapper
 
 def create_test_data(num_participants:int=100, num_stimulus:int=770):
     # for sample data reproducibility
