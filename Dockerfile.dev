@@ -1,9 +1,0 @@
-FROM hvalev/shiny-server-arm:devtools-R4.3.3-S1.5.21.1012
-
-RUN R -e "install.packages('plotly', repos='http://cran.rstudio.com/', type='source')"
-# gdal-config needed for terra and raster R packages or they won't compile
-RUN apt-get update && apt-get install libgdal-dev -y
-# important for rpy2
-RUN apt-get update && apt-get install nano python3-dev python3.11-venv -y
-COPY ./rcicr/rcicr /rcicr/rcicr
-RUN R -e "devtools::install('/rcicr/rcicr', repos='http://cran.rstudio.com/')"
