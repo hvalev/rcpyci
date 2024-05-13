@@ -24,7 +24,6 @@ classifiers = [
   # "Topic :: Reverse Correlation Classification Images :: Toolkit",
   # "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -81,11 +80,12 @@ authors = ["Hristo Valev <blank@blank.blank>"]
 
 [tool.poetry.dependencies]
 python = ">=3.9"
-jax = "^0.4.27"
 pandas = "^2.2.2"
 pillow = "^10.3.0"
 numpy = "^1.24.4"
 scipy =  "^1.13.0"
+tqdm = "^4.66.4"
+joblib = "^1.4.2"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.3"
@@ -96,7 +96,6 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-# Same as Black.
 line-length = 120
 extend-include = ["*.ipynb"]
 
