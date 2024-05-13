@@ -180,7 +180,7 @@ def __generate_all_noise_stimuli(n_trials, n_scales, img_size, noise_type, sigma
     stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed)
     stimuli = np.zeros((n_trials, img_size, img_size))
     patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
-    for trial in tqdm(range(n_trials)):
+    for trial in tqdm(range(n_trials), desc="Processing", total=n_trials):
         params = stimuli_params[trial]
         stimuli[trial,:,:] = __generate_individual_noise_stimulus(params, patches, patch_idx)
     return stimuli
