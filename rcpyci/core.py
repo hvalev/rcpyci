@@ -201,7 +201,7 @@ def generate_stimuli_2IFC(base_face: np.ndarray,
     assert n_trials == stimuli.shape[0]
     stimuli_ori = []
     stimuli_inv = []
-    for trial in tqdm(range(0,n_trials)):
+    for trial in range(0,n_trials):
         stimulus = __generate_stimulus_image(stimuli[trial, :, :], base_face)
         stimulus_inverted = __generate_stimulus_image(-stimuli[trial, :, :], base_face)
         stimuli_ori.append(stimulus)
