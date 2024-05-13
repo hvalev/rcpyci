@@ -7,17 +7,8 @@ from im_ops import apply_constant_scaling, apply_independent_scaling, apply_mask
 from scipy.ndimage import gaussian_filter
 from scipy.stats import norm, ttest_1samp
 
-# default values for generating stimuli
-default_stimuli_generation_kwargs = {
-    'n_trials': 5,
-    'n_scales': 5,
-    'sigma': 25,
-    'noise_type': 'sinusoid',
-}
-
 ### pipelines for postprocessing classification images
 
-# fetch and overwrite params when needed
 default_ci_postprocessing_pipeline_kwargs = {
     'scaling': 'independent',
     'scaling_constant': 0.1,
