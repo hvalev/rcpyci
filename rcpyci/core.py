@@ -59,8 +59,9 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         noise_type: str = 'sinusoid',
                         seed: int = 1):
     img_size = get_image_size(base_image)
-    # Load parameter file (created when generating stimuli)
-    stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
+    # if stimuli_params is passed, no need to recompute it
+    if stimuli_params is None:
+        stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
     patches, patch_idx = __generate_noise_pattern(img_size=img_size, n_scales=n_scales, noise_type=noise_type, sigma=sigma)
 
     ci, combined = compute_ci(base_image = base_image,
