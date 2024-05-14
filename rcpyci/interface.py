@@ -74,7 +74,7 @@ def analyze_data(data: pd.DataFrame,
         grouped_data = sorted_data.groupby(['condition', 'stimulus_id'])['responses'].mean().reset_index()
         # extract data for a single condition and sort by stimulus_id
         single_condition_data = grouped_data[grouped_data['condition'] == condition].sort_values(by='stimulus_id')
-        sorted_responses = single_condition_data['responses'].to_numpy().reshape(770, 1)
+        sorted_responses = single_condition_data['responses'].to_numpy().reshape(n_trials, 1)
         kwargs['responses'] = sorted_responses
         
         ci, combined, zmap = compute_ci_and_zmap(**kwargs)
@@ -157,7 +157,7 @@ def analyze_data(data: pd.DataFrame,
         
         # get normalized order of responses for the participant and pass to kwargs
         sorted_data = data[data['participant_id'] == participant].sort_values(by='stimulus_id')
-        sorted_responses = sorted_data['responses'].to_numpy().reshape(770, 1)
+        sorted_responses = sorted_data['responses'].to_numpy().reshape(n_trials, 1)
         kwargs['responses'] = sorted_responses
 
         ci, combined, zmap = compute_ci_and_zmap(**kwargs)
