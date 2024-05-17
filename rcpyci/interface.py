@@ -174,6 +174,33 @@ def process_participants(participants: list,
                          experiment_path:str='./experiment',
                          label: str='rcpyci',
                          n_jobs=10):
+    """
+    This function processes individual participants, calculating CI and zmaps for each.
+
+    Parameters:
+        participants (list): A list of participant IDs.
+        data (pd.DataFrame): The raw response data.
+        base_image (np.ndarray): The base image used for visualization.
+        stimuli_params (np.ndarray, optional): Additional parameters related to the stimuli. Defaults to None.
+        ci_postproc_pipe (Callable[[Any], Any], optional): A pipeline function for processing CI. Defaults to ci_postprocessing_pipeline.
+        ci_postproc_kwargs (dict, optional): Keyword arguments for the CI post-processing pipeline. Defaults to default_ci_postprocessing_pipeline_kwargs.
+        zmap_pipe (Callable[[Any], Any], optional): A pipeline function for computing zmaps. Defaults to compute_zmap_ttest_pipeline.
+        zmap_kwargs (dict, optional): Keyword arguments for the zmap computation pipeline. Defaults to default_compute_zmap_ttest_pipeline_kwargs.
+        anti_ci (bool, optional): Whether to generate anti-CI or not. Defaults to False.
+        n_trials (int, optional): The number of trials used in the analysis. Defaults to 770.
+        n_scales (int, optional): The number of scales used in the analysis. Defaults to 5.
+        sigma (int, optional): The standard deviation used in the noise generation. Defaults to 5.
+        noise_type (str, optional): The type of noise to generate. Defaults to 'sinusoid'.
+        seed (int, optional): The random seed for generating noise. Defaults to 1.
+        save_ci (bool, optional): Whether to save the calculated CI. Defaults to True.
+        save_zmap (bool, optional): Whether to save the calculated zmaps. Defaults to True.
+        experiment_path (str, optional): The path where the results will be saved. Defaults to './experiment'.
+        label (str, optional): A unique label for the experiment. Defaults to 'rcpyci'.
+
+    Returns:
+        result (list): A list of participant IDs with corresponding CI and zmap data.
+
+    """
     # pass along input variables apart from already consumed ones
     kwargs = {k: v for k, v in locals().items()}
     consumed_variables = ['participants', 'n_jobs']
@@ -205,6 +232,35 @@ def analyze_data(data: pd.DataFrame,
                  experiment_path:str='./experiment',
                  label:str='rcpyci',
                  n_jobs=10):
+    """
+    This function analyzes the given data, a pandas DataFrame, to calculate classification images (CIs) for each participant based on their responses.
+    It also computes z-maps if the necessary argument is provided.
+
+    Parameters:
+    - `data`: The input data, a pandas DataFrame. It must contain at least two columns: 'participant_id' and 'responses'.
+    - `base_face_path`: The path to the base face image used in the experiment.
+    - `stimuli_params`: Optional parameters for the stimuli used in the experiment (default is None).
+    - `ci_postproc_pipe`: A pipeline function for post-processing CI calculations (default is ci_ postprocessing_pipeline).
+    - `ci_postproc_kwargs`: Keyword arguments for the CI post-processing pipeline (default is default_ci_postprocessing_pipeline_ kwargs).
+    - `zmap_pipe`: A pipeline function for computing z-maps (default is compute_zmap_ttest_pipeline).
+    - `zmap_kwargs`: Keyword arguments for the z-map computation pipeline (default is default_compute_zmap_ttest_pipeline_ kwargs).
+    - `anti_ci`: A boolean flag indicating whether to calculate anti-CI or not (default is False).
+    - `n_trials`: The number of trials in the experiment (default is 770).
+    - `n_scales`: The number of scales used in the experiment (default is 5).
+    - `sigma`: The standard deviation of the noise added to the responses (default is 5).
+    - `noise_type`: The type of noise to add to the responses (default is 'sinusoid').
+    - `seed`: A seed value for reproducibility (default is 1).
+    - `save_ci`: A boolean flag indicating whether to save the CI images or not (default is True).
+    - `save_zmap`: A boolean flag indicating whether to save the z-map images or not (default is True).
+    - `experiment_path`: The path where the experiment results will be saved (default is './experiment').
+    - `label`: A label for the experiment results (default is 'rcpyci').
+    - `n_jobs`: The number of parallel jobs to use for processing participants (default is 10).
+
+    Returns:
+    - A tuple containing two lists: `participants_results` and `conditions_results`. These lists contain the CI and z-map results for each participant and condition, respectively.
+
+    Note that this function uses the multiprocessing library to process the data in parallel. The number of parallel jobs can be controlled using the `n_jobs` parameter.
+    """
     base_image = read_image(os.path.join(os.getcwd(), base_face_path), grayscale=True)
     os.makedirs(experiment_path, exist_ok=True)
 
@@ -234,6 +290,33 @@ def setup_experiment(base_face_path: str,
                      experiment_path: str = './experiment',
                      label: str = 'rcpyci',
                      seed: int = 1):
+    """
+    Setup and prepare the experiment for a given base face, number of trials,
+    scales, sigma, noise type, and path.
+
+    This function generates the required stimulus material using the provided
+    parameters. It also creates folders to save the generated stimuli and data
+    files. The timestamp is used to create unique filenames for each trial.
+    Finally, it saves the base face image and the experiment configuration as a
+    numpy array to disk.
+
+    Parameters:
+        base_face_path (str): Path to the base face image file.
+        n_trials (int): Number of trials in the experiment. Default is 770.
+        n_scales (int): Number of scales used for stimulus generation.
+            Default is 5.
+        sigma (int): Sigma value used for Gaussian noise generation. Default
+            is 5.
+        noise_type (str): Type of noise to generate. Default is 'sinusoid'.
+        experiment_path (str): Path where the experiment data will be saved.
+            Default is './experiment'.
+        label (str): Label for the experiment, used in file names and data
+            saving. Default is 'rcpyci'.
+        seed (int): Seed value for random number generation. Default is 1.
+
+    Returns:
+        None
+    """
     
     base_image = read_image(os.path.join(os.getcwd(), base_face_path), grayscale=True)
     assert base_image.shape[0] == base_image.shape[1]
