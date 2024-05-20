@@ -66,6 +66,8 @@ def process_condition(condition,
     zmap_filename = f"zmap_{label}_{condition}.png"
 
     if save_ci:
+        save_image(image=ci, path=os.path.join(experiment_path, "ci_raw", ci_filename), save_npy=True)
+    if save_ci:
         save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
     if zmap_pipe is not None and save_zmap:
         save_image(image=zmap, path=os.path.join(experiment_path, "zmap", zmap_filename), save_npy=True)
@@ -148,6 +150,8 @@ def process_participant(participant,
     
     zmap_filename = f"zmap_{label}_{participant}.png"
 
+    if save_ci:
+        save_image(image=ci, path=os.path.join(experiment_path, "ci_raw", ci_filename), save_npy=True)
     if save_ci:
         save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
     if zmap_pipe is not None and save_zmap:
