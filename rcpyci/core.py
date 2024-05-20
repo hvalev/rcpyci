@@ -10,9 +10,9 @@ import numpy as np
 from im_ops import combine, get_image_size
 from pipelines import (
     ci_postprocessing_pipeline,
+    ci_postprocessing_pipeline_kwargs,
     compute_zmap_ttest_pipeline,
-    default_ci_postprocessing_pipeline_kwargs,
-    default_compute_zmap_ttest_pipeline_kwargs,
+    compute_zmap_ttest_pipeline_kwargs,
 )
 from tqdm import tqdm
 
@@ -23,7 +23,7 @@ def compute_ci(base_image: np.ndarray,
                patches: np.ndarray = None,
                patch_idx: np.ndarray = None,
                ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-               ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
+               ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
                anti_ci: bool = False,
                n_trials: int = 770,
                n_scales: int = 5,
@@ -70,9 +70,9 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                         responses: np.ndarray,
                         stimuli_params: np.ndarray = None,
                         ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                        ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
+                        ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
                         zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                        zmap_kwargs: dict = default_compute_zmap_ttest_pipeline_kwargs,
+                        zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
                         anti_ci: bool = False,
                         n_trials: int = 770,
                         n_scales: int = 5,
@@ -120,12 +120,17 @@ def compute_ci_and_zmap(base_image: np.ndarray,
                               noise_type = noise_type,
                               seed = seed)
     
+    # Get all local variables, and pipe the ones needed for the postprocessing pipelines, e.g. zmap, infoval, etc
+    local_variables = locals()
+    piped_local_variables = ['base_image', 'ci', 'stimuli_params', 'responses', 'patches', 'patch_idx', 'anti_ci', 'n_trials', 'n_scales', 'sigma', 'noise_type', 'seed']
+    local_variables = {key: local_variables[key] for key in piped_local_variables}
+
     zmap = None
     if zmap_pipe is not None:
         if anti_ci:        
-            stimuli_params = -stimuli_params
-        zmap = zmap_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, **zmap_kwargs)
-
+            local_variables['stimuli_params'] = -stimuli_params
+        zmap = zmap_pipe(**local_variables, **zmap_kwargs)
+        
     return ci, combined, zmap
 
 def __generate_ci_noise(stimuli, responses, patches, patch_idx):

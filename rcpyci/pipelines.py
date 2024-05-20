@@ -9,7 +9,7 @@ from scipy.stats import norm, ttest_1samp
 
 ### pipelines for postprocessing classification images
 
-default_ci_postprocessing_pipeline_kwargs = {
+ci_postprocessing_pipeline_kwargs = {
     'scaling': 'independent',
     'scaling_constant': 0.1,
     'mask': None
@@ -51,13 +51,12 @@ def ci_postprocessing_pipeline(
 
 ### pipelines for postprocessing classification images
 
-default_compute_zmap_ci_pipeline_kwargs = {
-    'sigma': 25,
+compute_zmap_ci_pipeline_kwargs = {
     'threshold': 5,
 }
 
 
-def compute_zmap_ci_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, sigma, threshold):
+def compute_zmap_ci_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, threshold):
     """
     Compute a z-score map from a classification image (CI) by applying Gaussian filtering and thresholding.
 
@@ -79,9 +78,10 @@ def compute_zmap_ci_pipeline(base_image, ci, stimuli_params, responses, patches,
     zmap[(zmap > -threshold) & (zmap < threshold)] = np.nan
     return zmap
 
-default_compute_zmap_ttest_pipeline_kwargs = {}
+compute_zmap_ttest_pipeline_kwargs = {
+}
 
-def compute_zmap_ttest_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx):
+def compute_zmap_ttest_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
     """
     Compute a z-score map from a classification image (CI) by applying t-test and thresholding.
 
