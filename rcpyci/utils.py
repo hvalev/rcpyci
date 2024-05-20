@@ -36,10 +36,8 @@ def skip_if_exist(func):
 
         if kwargs['save_ci'] and not os.path.exists(os.path.join(kwargs['experiment_path'], "ci", ci_filename)):
             ci_exists = False
-            #save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
         if kwargs['save_zmap'] and not os.path.exists(os.path.join(kwargs['experiment_path'], "zmap", zmap_filename)):
             zmap_exists = False
-            #save_image(image=zmap, path=os.path.join(experiment_path, "zmap", zmap_filename), save_npy=True)
         
         # If both files exist, skip computation
         if ci_exists and zmap_exists:
@@ -50,6 +48,7 @@ def skip_if_exist(func):
         return func(*args, **kwargs)
     
     return wrapper
+
 
 def create_test_data(n_participants:int=100, n_trials:int=770):
     # for sample data reproducibility
