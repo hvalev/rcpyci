@@ -117,7 +117,7 @@ compute_infoval_2IFC_pipeline_kwargs = {
     'save_output': True,
 }
 
-def compute_infoval_2IFC_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, name, save_output, iter=10000):
+def compute_infoval_2IFC_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, iter=10000):
     # target_ci, reference_norms
     # generate reference norms
     from utils import generate_reference_distribution_2IFC
@@ -158,9 +158,7 @@ def compute_infoval_2IFC_pipeline(base_image, ci, stimuli_params, responses, pat
 
 # skeleton pipeline
 sample_pipe_kwargs = {
-    'name': 'sample',
-    'save_output': True,
 }
 
-def sample_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, name, save_output):
+def sample_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
     return
