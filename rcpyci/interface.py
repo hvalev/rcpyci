@@ -10,17 +10,18 @@ from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
-from core import compute_ci_and_zmap, generate_stimuli_2IFC
-from im_ops import read_image, save_image
 from joblib import Parallel, delayed
-from pipelines import (
+from tqdm import tqdm
+
+from .core import compute_ci_and_zmap, generate_stimuli_2IFC
+from .im_ops import read_image, save_image
+from .pipelines import (
     ci_postprocessing_pipeline,
-    compute_zmap_ttest_pipeline,
     ci_postprocessing_pipeline_kwargs,
+    compute_zmap_ttest_pipeline,
     compute_zmap_ttest_pipeline_kwargs,
 )
-from tqdm import tqdm
-from utils import create_test_data, skip_if_exist, verify_data
+from .utils import create_test_data, skip_if_exist, verify_data
 
 logging.basicConfig(level=logging.INFO)
 
@@ -354,3 +355,19 @@ def setup_experiment(base_face_path: str,
              label=label,
              seed=seed)
     logging.info("Done!")
+
+##### 
+# setup_experiment("./base_face.jpg")
+#####
+# a = create_test_data()
+# verify_data(a)
+# results = analyze_data(a, "./base_face.jpg")
+#####
+
+
+a = create_test_data(n_trials=500)
+a = pd.read_csv('mturk_data_for_rcpyci.csv')
+verify_data(a)
+stims = np.load('stimulus.npy')
+results = analyze_data(a, "./base_face.jpg", n_trials=500, stimuli_params=stims)
+a = 0

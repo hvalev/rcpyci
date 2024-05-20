@@ -3,9 +3,10 @@ File Name: pipelines.py
 Description: TBD
 """
 import numpy as np
-from im_ops import apply_constant_scaling, apply_independent_scaling, apply_mask, combine, get_image_size
 from scipy.ndimage import gaussian_filter
 from scipy.stats import norm, ttest_1samp
+
+from .im_ops import apply_constant_scaling, apply_independent_scaling, apply_mask, combine, get_image_size
 
 ### pipelines for postprocessing classification images
 
@@ -106,3 +107,60 @@ def compute_zmap_ttest_pipeline(base_image, ci, stimuli_params, responses, patch
     t_stat, p_values = ttest_1samp(noise_images, popmean=0, axis=2)
     zmap = np.sign(ci) * np.abs(norm.ppf(p_values / 2))
     return zmap
+
+
+### Compute infoval on a ci as a postprocessing pipeline
+
+compute_infoval_2IFC_pipeline_kwargs = {
+    'iter': 10000,
+    'name': 'infoval', 
+    'save_output': True,
+}
+
+def compute_infoval_2IFC_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, name, save_output, iter=10000):
+    # target_ci, reference_norms
+    # generate reference norms
+    from utils import generate_reference_distribution_2IFC
+
+    img_size = get_image_size(base_image)
+    
+
+    reference_norms = generate_reference_distribution_2IFC(n_trials,
+                                         img_size, 
+                                         n_scales, 
+                                         noise_type, 
+                                         sigma, 
+                                         seed=seed,
+                                         stimuli_params = None, 
+                                         patches = None,
+                                         patch_idx = None,
+                                         iter=10000)
+
+    # Compute reference values
+    ref_median = np.median(reference_norms)
+    ref_mad = np.median(np.abs(reference_norms - ref_median))
+    ref_iter = len(reference_norms)
+
+    # Compute informational value metric
+    cinorm = norm(ci, 'f')
+    info_val = (cinorm - ref_median) / ref_mad
+
+    print(f"Informational value: z = {info_val} (ci norm = {cinorm}; reference median = {ref_median}; MAD = {ref_mad}; iterations = {ref_iter})")
+    result = {
+        'info': info_val,
+        'cinorm': cinorm,
+        'median': ref_median,
+        'mad': ref_mad,
+        'iter': ref_iter
+    }
+
+    return result
+
+# skeleton pipeline
+sample_pipe_kwargs = {
+    'name': 'sample',
+    'save_output': True,
+}
+
+def sample_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, name, save_output):
+    return

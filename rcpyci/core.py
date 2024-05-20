@@ -7,14 +7,15 @@ import random
 from typing import Any, Callable
 
 import numpy as np
-from im_ops import combine, get_image_size
-from pipelines import (
+from tqdm import tqdm
+
+from .im_ops import combine, get_image_size
+from .pipelines import (
     ci_postprocessing_pipeline,
     ci_postprocessing_pipeline_kwargs,
     compute_zmap_ttest_pipeline,
     compute_zmap_ttest_pipeline_kwargs,
 )
-from tqdm import tqdm
 
 
 def compute_ci(base_image: np.ndarray,
