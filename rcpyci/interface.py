@@ -16,8 +16,8 @@ from joblib import Parallel, delayed
 from pipelines import (
     ci_postprocessing_pipeline,
     compute_zmap_ttest_pipeline,
-    default_ci_postprocessing_pipeline_kwargs,
-    default_compute_zmap_ttest_pipeline_kwargs,
+    ci_postprocessing_pipeline_kwargs,
+    compute_zmap_ttest_pipeline_kwargs,
 )
 from tqdm import tqdm
 from utils import create_test_data, skip_if_exist, verify_data
@@ -30,9 +30,9 @@ def process_condition(condition,
                       base_image: np.ndarray,
                       stimuli_params: np.ndarray = None,
                       ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                      ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
+                      ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
                       zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                      zmap_kwargs: dict = default_compute_zmap_ttest_pipeline_kwargs,
+                      zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
                       anti_ci: bool = False,
                       n_trials: int = 770,
                       n_scales: int = 5,
@@ -67,7 +67,7 @@ def process_condition(condition,
 
     if save_ci:
         save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
-    if zmap is not None and save_zmap:
+    if zmap_pipe is not None and save_zmap:
         save_image(image=zmap, path=os.path.join(experiment_path, "zmap", zmap_filename), save_npy=True)
 
     return condition, ci, combined, zmap
@@ -77,9 +77,9 @@ def process_conditions(conditions,
                        base_image: np.ndarray,
                        stimuli_params: np.ndarray = None,
                        ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                       ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
+                       ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
                        zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                       zmap_kwargs: dict = default_compute_zmap_ttest_pipeline_kwargs,
+                       zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
                        anti_ci: bool = False,
                        n_trials: int = 770,
                        n_scales: int = 5,
@@ -115,9 +115,9 @@ def process_participant(participant,
                         base_image: np.ndarray,
                         stimuli_params: np.ndarray = None,
                         ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                        ci_postproc_kwargs: dict = default_ci_postprocessing_pipeline_kwargs,
+                        ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
                         zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                        zmap_kwargs: dict = default_compute_zmap_ttest_pipeline_kwargs,
+                        zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
                         anti_ci: bool = False,
                         n_trials: int = 770,
                         n_scales: int = 5,
@@ -150,7 +150,7 @@ def process_participant(participant,
 
     if save_ci:
         save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
-    if zmap is not None and save_zmap:
+    if zmap_pipe is not None and save_zmap:
         save_image(image=zmap, path=os.path.join(experiment_path, "zmap", zmap_filename), save_npy=True)
 
     return participant, ci, combined, zmap
@@ -218,9 +218,9 @@ def analyze_data(data: pd.DataFrame,
                  base_face_path:str,
                  stimuli_params: np.ndarray = None,
                  ci_postproc_pipe=ci_postprocessing_pipeline,
-                 ci_postproc_kwargs=default_ci_postprocessing_pipeline_kwargs,
+                 ci_postproc_kwargs=ci_postprocessing_pipeline_kwargs,
                  zmap_pipe=compute_zmap_ttest_pipeline,
-                 zmap_kwargs=default_compute_zmap_ttest_pipeline_kwargs,
+                 zmap_kwargs=compute_zmap_ttest_pipeline_kwargs,
                  anti_ci=False,
                  n_trials: int = 770,
                  n_scales: int = 5,
