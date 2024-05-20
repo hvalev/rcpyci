@@ -97,7 +97,7 @@ def compute_zmap_ttest_pipeline(base_image, ci, stimuli_params, responses, patch
     Returns:
         zmap: A z-score map computed from the input CI.
     """
-    from core import __generate_individual_noise_stimulus
+    from .core import __generate_individual_noise_stimulus
     img_size = get_image_size(base_image)
     weighted_parameters = stimuli_params * responses
     n_observations = len(responses)
