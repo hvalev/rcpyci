@@ -21,7 +21,7 @@ from .pipelines import (
     compute_zmap_ttest_pipeline,
     compute_zmap_ttest_pipeline_kwargs,
 )
-from .utils import create_test_data, skip_if_exist, verify_data
+from .utils import skip_if_exist
 
 logging.basicConfig(level=logging.INFO)
 
@@ -356,18 +356,3 @@ def setup_experiment(base_face_path: str,
              seed=seed)
     logging.info("Done!")
 
-##### 
-# setup_experiment("./base_face.jpg")
-#####
-# a = create_test_data()
-# verify_data(a)
-# results = analyze_data(a, "./base_face.jpg")
-#####
-
-
-a = create_test_data(n_trials=500)
-a = pd.read_csv('mturk_data_for_rcpyci.csv')
-verify_data(a)
-stims = np.load('stimulus.npy')
-results = analyze_data(a, "./base_face.jpg", n_trials=500, stimuli_params=stims)
-a = 0
