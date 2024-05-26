@@ -62,7 +62,8 @@ def compute_ci(base_image: np.ndarray,
     if anti_ci:
         stimuli_params = -stimuli_params
     
-    ci = __generate_ci_noise(stimuli_params, responses, patches, patch_idx)
+    # ci = 
+    return __generate_ci_noise(stimuli_params, responses, patches, patch_idx)
     # combine the base face with the aggregated ci noise image and apply post-processing
     combined = ci_postproc_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, **ci_postproc_kwargs)
     return ci, combined
@@ -214,7 +215,7 @@ def __generate_sinusoid(patch_size: int, cycles: float, angle: float, phase: flo
     sinusoid = contrast * np.sin(sinusoid)
     return sinusoid
 
-def __generate_gabor(patch_size:int, cycles:float, angle:float, phase:float, sigma:float, contrast:float):
+def __generate_gabor(patch_size:int, cycles:float, angle:float, phase:float, gabor_sigma:float, contrast:float):
     """
     This code defines a function that generates Gabor patches with varying parameters.
     The `__generate_gabor` function takes in the patch size, cycles, angle, phase, and contrast as inputs,
@@ -234,9 +235,8 @@ def __generate_gabor(patch_size:int, cycles:float, angle:float, phase:float, sig
     sinusoid = __generate_sinusoid(patch_size, cycles, angle, phase, contrast)
     x0 = np.linspace(-0.5, 0.5, patch_size)
     X, Y = np.meshgrid(x0, x0)
-    gauss_mask = np.exp(-((X ** 2 + Y ** 2) / (2 * (sigma / patch_size) ** 2)))
-    gabor = gauss_mask * sinusoid
-    return gabor
+    gauss_mask = np.exp(-((X ** 2 + Y ** 2) / (2 * (gabor_sigma / patch_size) ** 2)))
+    return gauss_mask * sinusoid
 
 def __generate_scales(img_size: int = 512):
     """
@@ -255,7 +255,7 @@ def __generate_scales(img_size: int = 512):
     patch_size_int = np.round(x / y).astype(int)
     return patch_size_int
 
-def __generate_noise_pattern(img_size:int=512, n_scales:int=5, noise_type:str='sinusoid', sigma:float=25):
+def __generate_noise_pattern(img_size:int=512, n_scales:int=5, noise_type:str='sinusoid', gabor_sigma:float=25):
     """
     Generate a noise pattern for a given image size and number of scales.
 
@@ -294,7 +294,7 @@ def __generate_noise_pattern(img_size:int=512, n_scales:int=5, noise_type:str='s
         for orientation in orientations:
             for phase in phases:
                 if noise_type == 'gabor':
-                    p = __generate_gabor(patch, 1.5, orientation, phase, sigma, 1)
+                    p = __generate_gabor(patch, 1.5, orientation, phase, gabor_sigma, 1)
                 else:
                     p = __generate_sinusoid(patch, 2, orientation, phase, 1)
                 # Repeat to fill scale
@@ -336,7 +336,7 @@ def __generate_stimuli_params(n_trials: int, n_scales: int, seed: int = 1):
     stimuli_params = np.random.uniform(-1, 1, size=(n_trials, nparams))
     return stimuli_params
 
-def __generate_all_noise_stimuli(n_trials: int, n_scales: int, img_size: int, noise_type: str, sigma: float, seed: int) -> np.ndarray:
+def __generate_all_noise_stimuli(n_trials: int, n_scales: int, img_size: int, noise_type: str, gabor_sigma: float, seed: int) -> np.ndarray:
     """
     Generate all noise stimuli.
 
@@ -348,7 +348,7 @@ def __generate_all_noise_stimuli(n_trials: int, n_scales: int, img_size: int, no
         n_scales (int): The number of scales in the noise pattern.
         img_size (int): The size of the image.
         noise_type (str): The type of noise pattern to generate ('gabor' or 'sinusoid').
-        sigma (float): The standard deviation of the Gaussian mask used in the Gabor filter.
+        gabor_sigma (float): The standard deviation of the Gaussian mask used in the Gabor filter.
         seed (int): The random seed.
 
     Returns:
@@ -356,7 +356,7 @@ def __generate_all_noise_stimuli(n_trials: int, n_scales: int, img_size: int, no
     """
     stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed)
     stimuli = np.zeros((n_trials, img_size, img_size))
-    patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+    patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, gabor_sigma=gabor_sigma)
     for trial in tqdm(range(n_trials), desc="Processing", total=n_trials):
         params = stimuli_params[trial]
         stimuli[trial,:,:] = __generate_individual_noise_stimulus(params, patches, patch_idx)
@@ -379,7 +379,7 @@ def  __generate_stimulus_image(stimulus: np.ndarray, base_face: np.ndarray):
 def generate_stimuli_2IFC(base_face: np.ndarray,
                           n_trials: int = 770,
                           n_scales: int = 5,
-                          sigma: int = 5,
+                          gabor_sigma: int = 25,
                           noise_type: str = 'sinusoid',
                           seed: int = 1):
     """
@@ -401,7 +401,7 @@ def generate_stimuli_2IFC(base_face: np.ndarray,
     """
     img_size = get_image_size(base_face)
 
-    stimuli = __generate_all_noise_stimuli(n_trials, n_scales, img_size, noise_type, sigma, seed)
+    stimuli = __generate_all_noise_stimuli(n_trials, n_scales, img_size, noise_type, gabor_sigma, seed)
     assert n_trials == stimuli.shape[0]
     stimuli_ori = []
     stimuli_inv = []
