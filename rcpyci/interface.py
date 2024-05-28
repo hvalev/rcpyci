@@ -6,47 +6,37 @@ Description: TBD
 import logging
 import os
 from datetime import datetime
-from typing import Any, Callable
+from typing import Callable, List, Tuple
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
-from .core import compute_ci_and_zmap, generate_stimuli_2IFC
+from .core import generate_stimuli_2ifc, process_pipelines
 from .im_ops import read_image, save_image
-from .pipelines import (
-    ci_postprocessing_pipeline,
-    ci_postprocessing_pipeline_kwargs,
-    compute_zmap_ttest_pipeline,
-    compute_zmap_ttest_pipeline_kwargs,
-)
-from .utils import skip_if_exist
+from .pipelines import full_pipeline
 
 logging.basicConfig(level=logging.INFO)
 
-@skip_if_exist
+
 def process_condition(condition,
                       data: pd.DataFrame,
                       base_image: np.ndarray,
+                      pipelines: List[Tuple[Callable, dict]] = full_pipeline,
                       stimuli_params: np.ndarray = None,
-                      ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                      ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
-                      zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                      zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
-                      anti_ci: bool = False,
+                      patches: np.ndarray = None,
+                      patch_idx: np.ndarray = None,
                       n_trials: int = 770,
                       n_scales: int = 5,
-                      sigma: int = 5,
+                      gabor_sigma: int = 5,
                       noise_type: str = 'sinusoid',
                       seed: int = 1,
-                      save_ci: bool = True,
-                      save_zmap: bool = True,
                       experiment_path: str = './experiment',
                       label:str='rcpyci'):
     # pass along input variables apart from already consumed ones
     kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['condition', 'data', 'save_ci', 'save_zmap', 'experiment_path', 'label']
+    consumed_variables = ['condition', 'data', 'experiment_path', 'label']
     for key in consumed_variables:
         kwargs.pop(key, None)
     # Sort the dataframe by 'condition', 'participant_id', and 'stimulus_id'
@@ -58,39 +48,35 @@ def process_condition(condition,
     sorted_responses = single_condition_data['responses'].to_numpy().reshape(n_trials, 1)
     kwargs['responses'] = sorted_responses
     
-    ci, combined, zmap = compute_ci_and_zmap(**kwargs)
-    
-    ci_filename = f"ci_{label}_{condition}.png"
-    if anti_ci:
-        ci_filename = f"antici_{label}_{condition}.png"
-    
-    zmap_filename = f"zmap_{label}_{condition}.png"
-
-    if save_ci:
-        save_image(image=ci, path=os.path.join(experiment_path, "ci_raw", ci_filename), save_npy=True)
-    if save_ci:
-        save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
-    if zmap_pipe is not None and save_zmap:
-        save_image(image=zmap, path=os.path.join(experiment_path, "zmap", zmap_filename), save_npy=True)
-
-    return condition, ci, combined, zmap
+    logging.info(f"Processing condition {condition}")
+    id = f"{label}_{condition}"
+    results = process_pipelines(base_image = base_image,
+                                responses = sorted_responses,
+                                pipelines = pipelines,
+                                id = id,
+                                path = experiment_path,
+                                stimuli_params = stimuli_params,
+                                patches = patches,
+                                patch_idx = patch_idx,
+                                n_trials = n_trials,
+                                n_scales = n_scales,
+                                gabor_sigma = gabor_sigma,
+                                noise_type = noise_type,
+                                seed = seed)
+    return results
 
 def process_conditions(conditions, 
                        data: pd.DataFrame,
                        base_image: np.ndarray,
+                       pipelines: List[Tuple[Callable, dict]] = full_pipeline,
                        stimuli_params: np.ndarray = None,
-                       ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                       ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
-                       zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                       zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
-                       anti_ci: bool = False,
+                       patches: np.ndarray = None,
+                       patch_idx: np.ndarray = None,
                        n_trials: int = 770,
                        n_scales: int = 5,
-                       sigma: int = 5,
+                       gabor_sigma: int = 25,
                        noise_type: str = 'sinusoid',
                        seed: int = 1,
-                       save_ci: bool = True,
-                       save_zmap: bool = True,
                        experiment_path:str='./experiment',
                        label:str='rcpyci',
                        n_jobs=10):
@@ -112,29 +98,24 @@ def process_conditions(conditions,
     logging.info("Finished processing ci and zmaps for conditions.")
     return result
 
-@skip_if_exist
 def process_participant(participant,
                         data: pd.DataFrame,
                         base_image: np.ndarray,
+                        pipelines: List[Tuple[Callable, dict]] = full_pipeline,
                         stimuli_params: np.ndarray = None,
-                        ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                        ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
-                        zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                        zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
-                        anti_ci: bool = False,
+                        patches: np.ndarray = None,
+                        patch_idx: np.ndarray = None,
                         n_trials: int = 770,
                         n_scales: int = 5,
-                        sigma: int = 5,
+                        gabor_sigma: int = 25,
                         noise_type: str = 'sinusoid',
                         seed: int = 1,
-                        save_ci: bool = True,
-                        save_zmap: bool = True,
                         experiment_path:str='./experiment',
                         label:str='rcpyci'):
     
     # pass along input variables apart from already consumed ones
     kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['participant', 'data', 'save_ci', 'save_zmap', 'experiment_path', 'label']
+    consumed_variables = ['participant', 'data', 'experiment_path', 'label']
     for key in consumed_variables:
         kwargs.pop(key, None)
     
@@ -143,39 +124,35 @@ def process_participant(participant,
     sorted_responses = sorted_data['responses'].to_numpy().reshape(n_trials, 1)
     kwargs['responses'] = sorted_responses
 
-    ci, combined, zmap = compute_ci_and_zmap(**kwargs)
-    
-    ci_filename = f"ci_{label}_{participant}.png"
-    if anti_ci:
-        ci_filename = f"antici_{label}_{participant}.png"
-    
-    zmap_filename = f"zmap_{label}_{participant}.png"
-
-    if save_ci:
-        save_image(image=ci, path=os.path.join(experiment_path, "ci_raw", ci_filename), save_npy=True)
-    if save_ci:
-        save_image(image=combined, path=os.path.join(experiment_path, "ci", ci_filename), save_npy=True)
-    if zmap_pipe is not None and save_zmap:
-        save_image(image=zmap, path=os.path.join(experiment_path, "zmap", zmap_filename), save_npy=True)
-
-    return participant, ci, combined, zmap
+    logging.info(f"Processing participant {participant}")
+    id = f"{label}_{participant}"
+    results = process_pipelines(base_image = base_image,
+                                responses = sorted_responses,
+                                pipelines = pipelines,
+                                id = id,
+                                path = experiment_path,
+                                stimuli_params = stimuli_params,
+                                patches = patches,
+                                patch_idx = patch_idx,
+                                n_trials = n_trials,
+                                n_scales = n_scales,
+                                gabor_sigma = gabor_sigma,
+                                noise_type = noise_type,
+                                seed = seed)
+    return results
 
 def process_participants(participants: list,
                          data: pd.DataFrame,
                          base_image: np.ndarray,
+                         pipelines: List[Tuple[Callable, dict]] = full_pipeline,
                          stimuli_params: np.ndarray = None,
-                         ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                         ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
-                         zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                         zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
-                         anti_ci: bool = False,
+                         patches: np.ndarray = None,
+                         patch_idx: np.ndarray = None,
                          n_trials: int = 770,
                          n_scales: int = 5,
-                         sigma: int = 5,
+                         gabor_sigma: int = 25,
                          noise_type: str = 'sinusoid',
                          seed: int = 1,
-                         save_ci: bool = True,
-                         save_zmap: bool = True,
                          experiment_path:str='./experiment',
                          label: str='rcpyci',
                          n_jobs=10):
@@ -220,20 +197,16 @@ def process_participants(participants: list,
     return result
 
 def analyze_data(data: pd.DataFrame,
-                 base_face_path:str,
+                 base_face_path: str,
+                 pipelines: List[Tuple[Callable, dict]] = full_pipeline,
                  stimuli_params: np.ndarray = None,
-                 ci_postproc_pipe=ci_postprocessing_pipeline,
-                 ci_postproc_kwargs=ci_postprocessing_pipeline_kwargs,
-                 zmap_pipe=compute_zmap_ttest_pipeline,
-                 zmap_kwargs=compute_zmap_ttest_pipeline_kwargs,
-                 anti_ci=False,
+                 patches: np.ndarray = None,
+                 patch_idx: np.ndarray = None,
                  n_trials: int = 770,
                  n_scales: int = 5,
-                 sigma: int = 5,
+                 gabor_sigma: int = 25,
                  noise_type: str = 'sinusoid',
                  seed: int = 1,
-                 save_ci: bool = True,
-                 save_zmap: bool = True,
                  experiment_path:str='./experiment',
                  label:str='rcpyci',
                  n_jobs=10):
@@ -245,18 +218,11 @@ def analyze_data(data: pd.DataFrame,
     - `data`: The input data, a pandas DataFrame. It must contain at least two columns: 'participant_id' and 'responses'.
     - `base_face_path`: The path to the base face image used in the experiment.
     - `stimuli_params`: Optional parameters for the stimuli used in the experiment (default is None).
-    - `ci_postproc_pipe`: A pipeline function for post-processing CI calculations (default is ci_ postprocessing_pipeline).
-    - `ci_postproc_kwargs`: Keyword arguments for the CI post-processing pipeline (default is default_ci_postprocessing_pipeline_ kwargs).
-    - `zmap_pipe`: A pipeline function for computing z-maps (default is compute_zmap_ttest_pipeline).
-    - `zmap_kwargs`: Keyword arguments for the z-map computation pipeline (default is default_compute_zmap_ttest_pipeline_ kwargs).
-    - `anti_ci`: A boolean flag indicating whether to calculate anti-CI or not (default is False).
     - `n_trials`: The number of trials in the experiment (default is 770).
     - `n_scales`: The number of scales used in the experiment (default is 5).
     - `sigma`: The standard deviation of the noise added to the responses (default is 5).
     - `noise_type`: The type of noise to add to the responses (default is 'sinusoid').
     - `seed`: A seed value for reproducibility (default is 1).
-    - `save_ci`: A boolean flag indicating whether to save the CI images or not (default is True).
-    - `save_zmap`: A boolean flag indicating whether to save the z-map images or not (default is True).
     - `experiment_path`: The path where the experiment results will be saved (default is './experiment').
     - `label`: A label for the experiment results (default is 'rcpyci').
     - `n_jobs`: The number of parallel jobs to use for processing participants (default is 10).
@@ -266,12 +232,25 @@ def analyze_data(data: pd.DataFrame,
 
     Note that this function uses the multiprocessing library to process the data in parallel. The number of parallel jobs can be controlled using the `n_jobs` parameter.
     """
+    from .core import __generate_noise_pattern, __generate_stimuli_params
+    from .im_ops import get_image_size
+    
     base_image = read_image(os.path.join(os.getcwd(), base_face_path), grayscale=True)
+    
+    # calculate stimuli params and patches for all participants and conditions
+    # and simply pass them along to propagate the pre-computed values here
+    # so that they are not re-computed in core.process_pipelines
+    img_size = get_image_size(base_image)
+    if stimuli_params is None:
+        stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
+    if patches is None or patch_idx is None:
+        patches, patch_idx = __generate_noise_pattern(img_size=img_size, n_scales=n_scales, noise_type=noise_type, gabor_sigma=gabor_sigma)
+    
     os.makedirs(experiment_path, exist_ok=True)
 
     # pass along input variables apart from already consumed ones
     kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['base_face_path']
+    consumed_variables = ['base_face_path', 'img_size', '__generate_stimuli_params', '__generate_noise_pattern', 'get_image_size']
     for key in consumed_variables:
         kwargs.pop(key, None)
     
@@ -290,7 +269,7 @@ def analyze_data(data: pd.DataFrame,
 def setup_experiment(base_face_path: str,
                      n_trials: int = 770,
                      n_scales: int = 5,
-                     sigma: int = 5,
+                     gabor_sigma: int = 25,
                      noise_type: str = 'sinusoid',
                      experiment_path: str = './experiment',
                      label: str = 'rcpyci',
@@ -327,15 +306,15 @@ def setup_experiment(base_face_path: str,
     assert base_image.shape[0] == base_image.shape[1]
 
     logging.info("Generating stimulus material")
-    stimuli_ori, stimuli_inv = generate_stimuli_2IFC(base_face=base_image,
+    stimuli_ori, stimuli_inv = generate_stimuli_2ifc(base_face=base_image,
                                                      n_trials=n_trials,
                                                      n_scales=n_scales,
-                                                     sigma=sigma,
+                                                     gabor_sigma=gabor_sigma,
                                                      noise_type=noise_type,
                                                      seed=seed)
     
     logging.info("Creating folders and saving data to disk")
-    os.makedirs(os.path(experiment_path), exist_ok=True)
+    os.makedirs(os.path.join(experiment_path), exist_ok=True)
     timestamp = datetime.now().strftime("%b_%d_%Y_%H_%M")
     for trial, (stimulus, stimulus_inverted) in tqdm(enumerate(zip(stimuli_ori, stimuli_inv)), desc="Processing", total=len(stimuli_ori)):
         filename_ori = f"stimulus_{label}_seed_{seed}_trial_{trial:0{len(str(n_trials))}d}_ori.png"
@@ -349,7 +328,7 @@ def setup_experiment(base_face_path: str,
              base_face_path=base_face_path,
              n_trials=n_trials,
              n_scales=n_scales,
-             sigma=sigma,
+             gabor_sigma=gabor_sigma,
              noise_type=noise_type,
              experiment_path=experiment_path,
              label=label,
