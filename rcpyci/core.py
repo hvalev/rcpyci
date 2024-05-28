@@ -2,20 +2,17 @@
 File Name: core.py
 Description: object to object part of the library, for any interaction and interfacing with files, check interface.py
 """
+import inspect
 import math
+import os
 import random
-from typing import Any, Callable
+from typing import Callable, List, Tuple
 
 import numpy as np
 from tqdm import tqdm
 
 from .im_ops import combine, get_image_size
-from .pipelines import (
-    ci_postprocessing_pipeline,
-    ci_postprocessing_pipeline_kwargs,
-    compute_zmap_ttest_pipeline,
-    compute_zmap_ttest_pipeline_kwargs,
-)
+from .utils import get_extension_from_decorator
 
 
 def compute_ci(base_image: np.ndarray,
@@ -23,12 +20,10 @@ def compute_ci(base_image: np.ndarray,
                stimuli_params: np.ndarray = None,
                patches: np.ndarray = None,
                patch_idx: np.ndarray = None,
-               ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-               ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
                anti_ci: bool = False,
                n_trials: int = 770,
                n_scales: int = 5,
-               sigma: int = 5,
+               gabor_sigma: int = 25,
                noise_type: str = 'sinusoid',
                seed: int = 1):
     """
@@ -376,7 +371,7 @@ def  __generate_stimulus_image(stimulus: np.ndarray, base_face: np.ndarray):
     stimulus = (stimulus + 0.3) / 0.6
     return combine(stimulus, base_face)
 
-def generate_stimuli_2IFC(base_face: np.ndarray,
+def generate_stimuli_2ifc(base_face: np.ndarray,
                           n_trials: int = 770,
                           n_scales: int = 5,
                           gabor_sigma: int = 25,
