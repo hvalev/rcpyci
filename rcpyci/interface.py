@@ -34,6 +34,32 @@ def process_condition(condition,
                       seed: int = 1,
                       experiment_path: str = './experiment',
                       label:str='rcpyci'):
+    """
+    This function processes a single condition from the given data. 
+    It calculates the average response for each stimulus_id across 
+    participants within the specified condition. It then uses these 
+    responses to generate visual stimuli and apply processing pipelines.
+
+    Args:
+
+        condition (int): The ID of the condition to process.
+        data (pd.DataFrame): The dataset containing participant responses.
+        base_image (np.ndarray): The base image used for generating visual stimuli.
+        pipelines (List[Tuple[Callable, dict]]): A list of processing pipelines to apply.
+        stimuli_params (np.ndarray): Optional parameters for generating visual stimuli.
+        patches (np.ndarray): Optional patch data.
+        patch_idx (np.ndarray): Optional index values for the patches.
+        n_trials (int): The number of trials to simulate.
+        n_scales (int): The number of scales to use in processing pipelines.
+        gabor_sigma (int): The standard deviation of Gabor filters used in processing pipelines.
+        noise_type (str): The type of noise to add to the processed stimuli.
+        seed (int): A random seed for reproducing results.
+        experiment_path (str): The path where the experiment data will be stored.
+        label (str): A label identifier for the condition.
+
+    Returns:
+        results: A dictionary containing the processed visual stimuli and their corresponding responses.
+    """
     # pass along input variables apart from already consumed ones
     kwargs = {k: v for k, v in locals().items()}
     consumed_variables = ['condition', 'data', 'experiment_path', 'label']
@@ -80,7 +106,45 @@ def process_conditions(conditions,
                        experiment_path:str='./experiment',
                        label:str='rcpyci',
                        n_jobs=10):
-    
+    """
+    Process conditions for a series of experiments.
+
+    This function processes each condition in the given `conditions` DataFrame,
+    applying various pipelines and transformations to generate ci and zmaps.
+    The results are returned as a list of processed condition objects.
+
+    Parameters:
+        conditions (pd.DataFrame): A DataFrame containing the experiment
+            conditions, with columns for the condition names.
+        data (pd.DataFrame): Additional data required for processing.
+        base_image (np.ndarray): The base image used for processing.
+        pipelines (List[Tuple[Callable, dict]]): A list of tuples containing
+            callable functions and their corresponding parameters. Defaults to
+            `full_pipeline`.
+        stimuli_params (np.ndarray): Optional array of stimulus parameters.
+        patches (np.ndarray): Optional array of patch indices.
+        patch_idx (np.ndarray): Optional array of patch indices.
+        n_trials (int): The number of trials per condition (default: 770).
+        n_scales (int): The number of scales to use in processing (default: 5).
+        gabor_sigma (int): The Gabor filter sigma value (default: 25).
+        noise_type (str): The type of noise to add to the images (default:
+            'sinusoid').
+        seed (int): The random seed for generating noise and other
+            randomness (default: 1).
+        experiment_path (str): The path to the experiment directory
+            (default: './experiment').
+        label (str): A label for the experiment (default: 'rcpyci').
+        n_jobs (int): The number of parallel jobs to use when processing
+            conditions. Defaults to 10.
+
+    Returns:
+        list: A list of processed condition objects, each representing a
+            set of ci and zmaps generated from the input data.
+
+    Notes:
+        Be mindful that with higher parallel jobs, the progress bar may become
+        less accurate.
+    """
     # pass along input variables apart from already consumed ones
     kwargs = {k: v for k, v in locals().items()}
     consumed_variables = ['conditions', 'n_jobs']
@@ -112,7 +176,34 @@ def process_participant(participant,
                         seed: int = 1,
                         experiment_path:str='./experiment',
                         label:str='rcpyci'):
+    """ 
+    Process participant data and apply visual processing pipelines.
+
+    This function takes in a participant ID, along with various data frames, 
+    arrays, and other inputs related to the experiment. It processes the 
+    participant's responses, applies a series of visual processing pipelines, 
+    and returns the results.
+
+    Parameters:
+        participant (int): The ID of the participant being processed.
+        data (pd.DataFrame): A DataFrame containing the participant's responses.
+        base_image (np.ndarray): A 2D array representing the base image used in the experiment.
+        pipelines (List[Tuple[Callable, dict]]): A list of tuples, where each tuple 
+                    contains a callable function and its arguments. These functions represent 
+                    the visual processing pipelines to be applied.
+        stimuli_params (np.ndarray): An optional array containing parameters related to the 
+                    stimuli presented during the experiment.
+        patches (np.ndarray): An optional array containing patch-level data from the participant's responses.
+        patch_idx (np.ndarray): An optional array indexing the patches in the patches array.
+        n_trials (int, default=770): The number of trials in the experiment.
+        n_scales (int, default=5): The number of scales used for constructing the noise patches.
+        gabor_sigma (int, default=25): The standard deviation of the Gabor filter.
+        noise_type (str, default='sinusoid'): The type of noise to be added to the images.
+        seed (int, default=1): A random seed for reproducibility.
     
+    Returns:
+        results: A dictionary containing the processed participant data and pipeline results.
+    """
     # pass along input variables apart from already consumed ones
     kwargs = {k: v for k, v in locals().items()}
     consumed_variables = ['participant', 'data', 'experiment_path', 'label']
@@ -164,20 +255,14 @@ def process_participants(participants: list,
         data (pd.DataFrame): The raw response data.
         base_image (np.ndarray): The base image used for visualization.
         stimuli_params (np.ndarray, optional): Additional parameters related to the stimuli. Defaults to None.
-        ci_postproc_pipe (Callable[[Any], Any], optional): A pipeline function for processing CI. Defaults to ci_postprocessing_pipeline.
-        ci_postproc_kwargs (dict, optional): Keyword arguments for the CI post-processing pipeline. Defaults to default_ci_postprocessing_pipeline_kwargs.
-        zmap_pipe (Callable[[Any], Any], optional): A pipeline function for computing zmaps. Defaults to compute_zmap_ttest_pipeline.
-        zmap_kwargs (dict, optional): Keyword arguments for the zmap computation pipeline. Defaults to default_compute_zmap_ttest_pipeline_kwargs.
-        anti_ci (bool, optional): Whether to generate anti-CI or not. Defaults to False.
         n_trials (int, optional): The number of trials used in the analysis. Defaults to 770.
         n_scales (int, optional): The number of scales used in the analysis. Defaults to 5.
         sigma (int, optional): The standard deviation used in the noise generation. Defaults to 5.
         noise_type (str, optional): The type of noise to generate. Defaults to 'sinusoid'.
         seed (int, optional): The random seed for generating noise. Defaults to 1.
-        save_ci (bool, optional): Whether to save the calculated CI. Defaults to True.
-        save_zmap (bool, optional): Whether to save the calculated zmaps. Defaults to True.
         experiment_path (str, optional): The path where the results will be saved. Defaults to './experiment'.
         label (str, optional): A unique label for the experiment. Defaults to 'rcpyci'.
+        n_jobs (int): The number of jobs to be used. Defaults to 10.
 
     Returns:
         result (list): A list of participant IDs with corresponding CI and zmap data.
@@ -210,27 +295,38 @@ def analyze_data(data: pd.DataFrame,
                  experiment_path:str='./experiment',
                  label:str='rcpyci',
                  n_jobs=10):
-    """
-    This function analyzes the given data, a pandas DataFrame, to calculate classification images (CIs) for each participant based on their responses.
-    It also computes z-maps if the necessary argument is provided.
+    """ 
+    Analyzes data and generates stimuli parameters and patches for all participants and conditions.
+
+    This function takes in a Pandas DataFrame containing participant data, as well as various 
+    input parameters related to image processing and experimental design. It uses these inputs 
+    to generate pre-computed values (stimuli parameters and patches) that can be used by subsequent 
+    processing pipelines.
+    The function first loads the base face image and calculates its size. It then generates stimuli 
+    parameters for all participants and conditions using the provided number of trials, scales, 
+    and seed value. Similarly, it generates noise patterns for all participants and conditions based 
+    on the input image size, number of scales, noise type, and Gabor sigma.
+    The function then creates a directory for storing experimental data and passes along input variables 
+    (apart from those that have already been consumed) to propagate pre-computed values to subsequent 
+    processing pipelines. It also extracts unique participant IDs and condition labels from the input 
+    DataFrame.
+    Finally, the function calls two separate processing functions - one for participants and one for 
+    conditions - passing in the pre-computed values and other relevant inputs. The results of these 
+    processes are returned as a tuple containing the participant-level results and condition-level results.
 
     Parameters:
-    - `data`: The input data, a pandas DataFrame. It must contain at least two columns: 'participant_id' and 'responses'.
-    - `base_face_path`: The path to the base face image used in the experiment.
-    - `stimuli_params`: Optional parameters for the stimuli used in the experiment (default is None).
-    - `n_trials`: The number of trials in the experiment (default is 770).
-    - `n_scales`: The number of scales used in the experiment (default is 5).
-    - `sigma`: The standard deviation of the noise added to the responses (default is 5).
-    - `noise_type`: The type of noise to add to the responses (default is 'sinusoid').
-    - `seed`: A seed value for reproducibility (default is 1).
-    - `experiment_path`: The path where the experiment results will be saved (default is './experiment').
-    - `label`: A label for the experiment results (default is 'rcpyci').
-    - `n_jobs`: The number of parallel jobs to use for processing participants (default is 10).
-
+        data: A Pandas DataFrame containing participant data.
+        base_face_path: Path to the base face image file.
+        pipelines: Optional list of processing pipelines (default: full_pipeline).
+        stimuli_params, patches, patch_idx: Pre-computed values for stimuli parameters and noise patterns (default: None).
+        n_trials, n_scales, gabor_sigma: Input parameters for generating stimuli parameters and noise patterns.
+        noise_type: Type of noise to generate (default: 'sinusoid').
+        seed: Random seed value for generating pre-computed values (default: 1).
+        experiment_path: Directory path for storing experimental data (default: './experiment').
+        label: Label for the experiment (default: 'rcpyci').
+        n_jobs: Number of jobs to run in parallel (default: 10).
     Returns:
-    - A tuple containing two lists: `participants_results` and `conditions_results`. These lists contain the CI and z-map results for each participant and condition, respectively.
-
-    Note that this function uses the multiprocessing library to process the data in parallel. The number of parallel jobs can be controlled using the `n_jobs` parameter.
+        A tuple containing participant-level results and condition-level results. 
     """
     from .core import __generate_noise_pattern, __generate_stimuli_params
     from .im_ops import get_image_size

@@ -27,25 +27,29 @@ def compute_ci(base_image: np.ndarray,
                noise_type: str = 'sinusoid',
                seed: int = 1):
     """
-    Compute the classification image for a given responses to a set of stimuli.
+    Computes classification image (CI) from given base image and stimulus responses.
 
-    Args:
-        base_image (np.ndarray): The base image used for computation.
-        responses (np.ndarray): The response values corresponding to each stimulus.
-        stimuli_params (np.ndarray, optional): The parameters of the stimuli. Defaults to None.
-        patches (np.ndarray, optional): The noise patterns used for computation. Defaults to None.
-        patch_idx (np.ndarray, optional): The indices corresponding to the patches. Defaults to None.
-        ci_postproc_pipe (Callable[[Any], Any], optional): The post-processing pipeline for CI computation. Defaults to ci_postprocessing_pipeline.
-        ci_postproc_kwargs (dict, optional): The keyword arguments for the post-processing pipeline. Defaults to default_ci_postprocessing_pipeline_kwargs.
-        anti_ci (bool, optional): Whether to generate the confidence intervals as the opposite of the true values. Defaults to False.
-        n_trials (int, optional): The number of trials used for computation. Defaults to 770.
-        n_scales (int, optional): The number of scales used for noise generation. Defaults to 5.
-        sigma (int, optional): The standard deviation used for noise generation. Defaults to 5.
-        noise_type (str, optional): The type of noise used for generation. Defaults to 'sinusoid'.
-        seed (int, optional): The random seed used for generating the noise patterns. Defaults to 1.
+    Parameters:
+        base_image: The original base image.
+        responses: The responses corresponding to each pair of stimulus images.
+        stimuli_params: Optional parameters related to the stimuli. Default is None.
+        patches: Optional patches used for computing CI. Default is None.
+        patch_idx: Index of the patches being considered. Default is None.
+        anti_ci: Whether to compute anti-contrastive information (False by default).
+        n_trials: Number of trials to consider while computing CI. Defaults to 770.
+        n_scales: Number of scales to consider while computing CI. Defaults to 5.
+        gabor_sigma: Sigma value for the Gabor filter used in CI computation. Defaults to 25.
+        noise_type: Type of noise to add (e.g., "sinusoid"). Default is "sinusoid".
+        seed: Random seed for reproducibility. Default is 1.
 
     Returns:
-        tuple: A tuple containing the classification image and it combined with the base image.
+        ci: The computed CI image.
+
+    Notes:
+        The function uses the `responses` and `base_image` as input parameters
+        and then computes CI based on these inputs. If `stimuli_params`, `patches`, or
+        `patch_idx` are provided, they will be used in the computation; otherwise,
+        default values will be used.
     """
     img_size = get_image_size(base_image)
 
@@ -72,6 +76,37 @@ def process_pipelines(base_image: np.ndarray,
                       gabor_sigma: int = 25,
                       noise_type: str = 'sinusoid',
                       seed: int = 1):
+    """
+    Process multiple pipelines on a base image, responses and algorithm internals. 
+
+    This function processes each pipeline in the list of tuples, where each tuple
+    contains a callable and its keyword arguments. The processed results from each
+    pipeline are returned as a list.
+
+    Parameters:
+        base_image: The original base image.
+        responses: The responses corresponding to each pair of stimulus images.
+        pipelines: A list of tuples, where each tuple contains a callable and its keyword arguments.
+        id: A unique identifier for the pipeline. Usually representing a split on participant or condition.
+        path: The path where the results should be saved.
+        stimuli_params: Optional parameters related to the stimuli. Default is None.
+        patches: Optional patches used for computing CI. Default is None.
+        patch_idx: Index of the patches being considered. Default is None.
+        n_trials: Number of trials to consider while computing CI. Defaults to 770.
+        n_scales: Number of scales to consider while computing CI. Defaults to 5.
+        gabor_sigma: Sigma value for the Gabor filter used in CI computation. Defaults to 25.
+        noise_type: Type of noise to add (e.g., "sinusoid"). Default is "sinusoid".
+        seed: Random seed for reproducibility. Default is 1.
+
+    Returns:
+        results: A list of processed results from each pipeline.
+
+    Notes:
+        This function processes the pipelines sequentially, using the `responses` and
+        `base_image` as input parameters for each pipeline. If `stimuli_params`, `patches`, or
+        `patch_idx` are provided, they will be used in the computation; otherwise,
+        default values will be used.
+    """
     # Get all local variables, and pipe the ones needed for the postprocessing pipelines
     img_size = get_image_size(base_image)
     # if stimuli_params is passed, no need to recompute it

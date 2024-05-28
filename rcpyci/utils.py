@@ -14,6 +14,27 @@ from .im_ops import save_image
 
 
 def cache_as_numpy(func):
+    """
+    Wraps a given function to store its results in a NumPy .npz file, 
+    allowing subsequent calls with the same inputs to return the cached result.
+
+    Args:
+        func: The function to wrap. This function should take arbitrary keyword arguments.
+              Its return value will be stored and retrieved from cache files.
+
+    Returns:
+        A new function that wraps the original. This new function can be used in place of 
+        the original, but it will check for cached results and use them if available.
+
+    Keyword Args:
+        cache: The path to a .npz file where the function's result should be stored.
+               If provided, the wrapped function will store its result here and load 
+               the result from this location on subsequent calls with the same inputs.
+
+    Notes:
+        This wrapper sets an attribute `_is_cache_as_numpy` on the wrapped function, 
+        which can be used to detect whether the function has been wrapped by this module.
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         cache_path = kwargs.get('cache')
@@ -35,6 +56,23 @@ def cache_as_numpy(func):
 
 
 def cache_as_image(func):
+    """
+    A decorator that caches the output of a function as an image.
+
+    Args:
+        func: The function to decorate. It should return a dictionary
+            where the values are PIL Image objects or any other type
+            that can be saved as an image.
+
+    Returns:
+        The decorated function, which caches its output as an image
+        if a cache path is provided in the function call.
+
+    Notes:
+        The cached image will overwrite any existing file at the given
+        cache path. If no cache path is provided, the output will not be
+        cached.
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         cache_path = kwargs.get('cache')
@@ -50,6 +88,19 @@ def cache_as_image(func):
     return wrapper
 
 def get_extension_from_decorator(func):
+    """ Get the file extension from a decorator.
+
+    This function takes a decorated function as input and returns the file extension 
+    associated with that decoration. The decorator can be one of two types: 
+    either it caches the result as a NumPy array (.npz) or as an image (.png).
+
+    If the function is not decorated, this function will return None.
+
+    Parameters: func (function): The decorated function to examine
+
+    Returns: str: The file extension associated with the decoration, 
+    or None if no decoration was found.
+    """
     while hasattr(func, '__wrapped__'):
         if getattr(func, '_is_cache_as_numpy', False):
             return 'npz'
