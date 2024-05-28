@@ -10,45 +10,53 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
+from .im_ops import save_image
 
-def skip_if_exist(func):
+
+def cache_as_numpy(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # set both to true
-        ci_exists = True
-        zmap_exists = True
+        cache_path = kwargs.get('cache')
 
-        nameplate = ''
-        # are we computing participant-level cis and zmaps or condition-level cis
-        if 'participant' in kwargs.keys():
-            nameplate = kwargs['participant']
-        elif 'condition' in kwargs.keys():
-            nameplate = kwargs['condition']
-        else:
-            return func(*args, **kwargs)
-
-        # Check if ci and zmap files exist
-        ci_filename = f"ci_{kwargs['label']}_{nameplate}.png"
-        if kwargs['anti_ci']:
-            ci_filename = f"antici_{kwargs['label']}_{nameplate}.png"
+        if cache_path and os.path.exists(cache_path):
+            print(f'Cache hit for {cache_path}')
+            result = np.load(cache_path)
+            return {key: result[key] for key in result.files}
         
-        zmap_filename = f"zmap_{kwargs['label']}_{nameplate}.png"
-
-        if kwargs['save_ci'] and not os.path.exists(os.path.join(kwargs['experiment_path'], "ci", ci_filename)):
-            ci_exists = False
-        if kwargs['save_zmap'] and not os.path.exists(os.path.join(kwargs['experiment_path'], "zmap", zmap_filename)):
-            zmap_exists = False
+        result = func(*args, **kwargs)
         
-        # If both files exist, skip computation
-        if ci_exists and zmap_exists:
-            print(f"Skipping computation for participant/condition {nameplate}: ci and zmap files already exist.")
-            return nameplate, None, None, None
+        if cache_path:
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            np.savez(cache_path, **result)
         
-        # Otherwise, proceed with the original function
-        return func(*args, **kwargs)
-    
+        return result
+    wrapper._is_cache_as_numpy = True
     return wrapper
 
+
+def cache_as_image(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        cache_path = kwargs.get('cache')
+
+        result = func(*args, **kwargs)
+        
+        if cache_path:
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            save_image(next(iter(result.values())), cache_path)
+        
+        return result
+    wrapper._is_cache_as_image = True
+    return wrapper
+
+def get_extension_from_decorator(func):
+    while hasattr(func, '__wrapped__'):
+        if getattr(func, '_is_cache_as_numpy', False):
+            return 'npz'
+        if getattr(func, '_is_cache_as_image', False):
+            return 'png'
+        func = func.__wrapped__
+    return None
 
 def create_test_data(n_participants:int=100, n_trials:int=770):
     # for sample data reproducibility
@@ -109,7 +117,6 @@ def verify_data(df: pd.DataFrame, verbose=False):
 
 # def compare_images(img1_path, img2_path):
 #     return all([x == y for x, y in zip(Image.open(img1_path).convert("L").getdata(), Image.open(img2_path).convert("L").getdata())])
-
 
 def compare_images(img1_path, img2_path):
     # Open images
