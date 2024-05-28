@@ -7,25 +7,56 @@ from scipy.ndimage import gaussian_filter
 from scipy.stats import norm, ttest_1samp
 
 from .im_ops import apply_constant_scaling, apply_independent_scaling, apply_mask, combine, get_image_size
+from .utils import cache_as_image, cache_as_numpy
 
 ### pipelines for postprocessing classification images
-
-ci_postprocessing_pipeline_kwargs = {
-    'scaling': 'independent',
-    'scaling_constant': 0.1,
-    'mask': None
+compute_anti_ci_kwargs = {
+    'anti_ci': True,
+    'use_cache': True,
+    'save_folder': 'anti_ci_raw'
 }
 
-def ci_postprocessing_pipeline(
-    base_image, 
-    ci, 
-    stimuli_params, 
-    responses, 
-    patches, 
-    patch_idx, 
-    mask=None, 
-    scaling='independent', 
-    scaling_constant=0.1):
+compute_ci_kwargs = {
+    'anti_ci': False,
+    'use_cache': True,
+    'save_folder': 'ci_raw'
+}
+
+@cache_as_numpy
+def compute_ci(base_image, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, gabor_sigma, noise_type, seed, cache=None):
+    from .core import compute_ci
+    ci = compute_ci(base_image=base_image,
+                    responses=responses,
+                    stimuli_params=stimuli_params,
+                    patches=patches,
+                    patch_idx=patch_idx,
+                    anti_ci=anti_ci,
+                    n_trials=n_trials,
+                    n_scales=n_scales,
+                    gabor_sigma=gabor_sigma,
+                    noise_type=noise_type,
+                    seed=seed)
+    return {'ci': ci}
+
+
+combine_anti_ci_kwargs = {
+    'scaling': 'independent',
+    'scaling_constant': 0.1,
+    'mask': None,
+    'use_cache': True,
+    'save_folder': 'anti_ci'
+}
+
+combine_ci_kwargs = {
+    'scaling': 'independent',
+    'scaling_constant': 0.1,
+    'mask': None,
+    'use_cache': True,
+    'save_folder': 'ci'
+}
+
+@cache_as_image
+def combine_ci(base_image, ci, mask=None, scaling='independent', scaling_constant=0.1, cache=None):
     """
     Postprocess a classification image (ci) using various scaling and masking techniques.
 
@@ -48,26 +79,25 @@ def ci_postprocessing_pipeline(
     scaled = apply_independent_scaling(ci) if scaling == 'independent' else \
              apply_constant_scaling(ci, scaling_constant)
     combined = combine(base_image, scaled)
-    return combined
+    return {'combined': combined}
 
 ### pipelines for postprocessing classification images
 
-compute_zmap_ci_pipeline_kwargs = {
+compute_zmap_ci_kwargs = {
     'threshold': 5,
+    'sigma': 5,
+    'use_cache': True,
+    'save_folder': 'zmap_ci'
 }
 
-
-def compute_zmap_ci_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, threshold):
+@cache_as_numpy
+def compute_zmap_ci(ci, sigma, threshold, cache=None):
     """
     Compute a z-score map from a classification image (CI) by applying Gaussian filtering and thresholding.
 
     Parameters:
         base_image: The original image.
         ci: The classification image to compute the z-map for.
-        stimuli_params: TBD
-        responses: TBD
-        patches: TBD
-        patch_idx: TBD
         sigma: The standard deviation of the Gaussian filter. Defaults to 25.
         threshold: The threshold value above which values in the z-map are set to NaN. Defaults to 5.
 
@@ -77,12 +107,15 @@ def compute_zmap_ci_pipeline(base_image, ci, stimuli_params, responses, patches,
     blurred_ci = gaussian_filter(ci, sigma=sigma, mode='constant', cval=0)
     zmap = (blurred_ci - np.mean(blurred_ci)) / np.std(blurred_ci)
     zmap[(zmap > -threshold) & (zmap < threshold)] = np.nan
-    return zmap
+    return {'zmap': zmap}
 
-compute_zmap_ttest_pipeline_kwargs = {
+compute_zmap_stimulus_params_kwargs = {
+    'use_cache': True,
+    'save_folder': 'zmap_stim'
 }
 
-def compute_zmap_ttest_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
+@cache_as_numpy
+def compute_zmap_stimulus_params(base_image, ci, stimuli_params, responses, patches, patch_idx, cache=None):
     """
     Compute a z-score map from a classification image (CI) by applying t-test and thresholding.
 
@@ -106,7 +139,7 @@ def compute_zmap_ttest_pipeline(base_image, ci, stimuli_params, responses, patch
         noise_images[:, :, obs] = __generate_individual_noise_stimulus(weighted_parameters[obs], patches, patch_idx)
     t_stat, p_values = ttest_1samp(noise_images, popmean=0, axis=2)
     zmap = np.sign(ci) * np.abs(norm.ppf(p_values / 2))
-    return zmap
+    return {'zmap' : zmap, 't_stat': t_stat, 'p_values': p_values}
 
 
 ### Compute infoval on a ci as a postprocessing pipeline
@@ -117,15 +150,15 @@ compute_infoval_2IFC_pipeline_kwargs = {
     'save_output': True,
 }
 
-def compute_infoval_2IFC_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, iter=10000):
+def compute_infoval_2ifc_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, iter=10000):
     # target_ci, reference_norms
     # generate reference norms
-    from utils import generate_reference_distribution_2IFC
+    from .utils import generate_reference_distribution_2ifc
 
     img_size = get_image_size(base_image)
     
 
-    reference_norms = generate_reference_distribution_2IFC(n_trials,
+    reference_norms = generate_reference_distribution_2ifc(n_trials,
                                          img_size, 
                                          n_scales, 
                                          noise_type, 
@@ -145,7 +178,7 @@ def compute_infoval_2IFC_pipeline(base_image, ci, stimuli_params, responses, pat
     cinorm = norm(ci, 'f')
     info_val = (cinorm - ref_median) / ref_mad
 
-    print(f"Informational value: z = {info_val} (ci norm = {cinorm}; reference median = {ref_median}; MAD = {ref_mad}; iterations = {ref_iter})")
+    # print(f"Informational value: z = {info_val} (ci norm = {cinorm}; reference median = {ref_median}; MAD = {ref_mad}; iterations = {ref_iter})")
     result = {
         'info': info_val,
         'cinorm': cinorm,
@@ -157,8 +190,26 @@ def compute_infoval_2IFC_pipeline(base_image, ci, stimuli_params, responses, pat
     return result
 
 # skeleton pipeline
-sample_pipe_kwargs = {
+sample_pipe_generator_kwargs = {
 }
 
-def sample_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
+@cache_as_numpy
+def sample_pipe_generator(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
     return
+
+sample_pipe_receiver_kwargs = {
+}
+
+@cache_as_numpy
+def sample_pipe_receiver(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
+    return
+
+
+full_pipeline = [
+    (compute_ci, compute_anti_ci_kwargs),
+    (combine_ci, combine_anti_ci_kwargs),
+    (compute_ci, compute_ci_kwargs),
+    (combine_ci, combine_ci_kwargs),
+    (compute_zmap_ci, compute_zmap_ci_kwargs),
+    (compute_zmap_stimulus_params, compute_zmap_stimulus_params_kwargs)
+]
