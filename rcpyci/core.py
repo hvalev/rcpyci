@@ -52,83 +52,50 @@ def compute_ci(base_image: np.ndarray,
     if stimuli_params is None:
         stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
     if patches is None or patch_idx is None:
-        patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, sigma=sigma)
+        patches, patch_idx = __generate_noise_pattern(img_size=img_size, noise_type=noise_type, n_scales=n_scales, gabor_sigma=gabor_sigma)
 
     if anti_ci:
         stimuli_params = -stimuli_params
     
-    # ci = 
     return __generate_ci_noise(stimuli_params, responses, patches, patch_idx)
-    # combine the base face with the aggregated ci noise image and apply post-processing
-    combined = ci_postproc_pipe(base_image, ci, stimuli_params, responses, patches, patch_idx, **ci_postproc_kwargs)
-    return ci, combined
 
-def compute_ci_and_zmap(base_image: np.ndarray,
-                        responses: np.ndarray,
-                        stimuli_params: np.ndarray = None,
-                        ci_postproc_pipe: Callable[[Any], Any] = ci_postprocessing_pipeline,
-                        ci_postproc_kwargs: dict = ci_postprocessing_pipeline_kwargs,
-                        zmap_pipe: Callable[[Any], Any] = compute_zmap_ttest_pipeline,
-                        zmap_kwargs: dict = compute_zmap_ttest_pipeline_kwargs,
-                        anti_ci: bool = False,
-                        n_trials: int = 770,
-                        n_scales: int = 5,
-                        sigma: int = 5,
-                        noise_type: str = 'sinusoid',
-                        seed: int = 1):
-    """Compute CI and Z-map: Compute the classification image (CI) and z-map from base image, responses, and optional parameters.
-
-    Parameters:
-        base_image (np.ndarray): The base image.
-        responses (np.ndarray): The *in-order* responses to stimuli.
-        stimuli_params (np.ndarray): Optional parameter for sideloading pre-generated parameter space.
-        ci_postproc_pipe (Callable[[Any], Any]): Pipeline for post-processing the CI noise image.
-        ci_postproc_kwargs (dict): Keyword arguments for the post-processing pipeline.
-        anti_ci (bool): Whether to negate the stimuli parameters.
-        n_trials (int): Number of trials in the experiment. Default is 770.
-        n_scales (int): Number of scales in the noise pattern. Default is 5.
-        sigma (int): Standard deviation of the noise pattern. Default is 5.
-        noise_type (str): Type of noise pattern. Default is 'sinusoid'.
-        seed (int): Seed for random number generation. Default is 1.
-
-    Returns:
-        ci (np.ndarray): The computed CI noise image.
-        combined (np.ndarray): The combined base face and aggregated CI noise image, with post-processing applied.
-        z_map (np.ndarray): The z-map of the responses to stimuli, if the compute_zmap_ pipeline is provided.
-
-    """
+def process_pipelines(base_image: np.ndarray,
+                      responses: np.ndarray,
+                      pipelines: List[Tuple[Callable, dict]],
+                      id: str,
+                      path: str,
+                      stimuli_params: np.ndarray = None,
+                      patches: np.ndarray = None,
+                      patch_idx: np.ndarray = None,
+                      n_trials: int = 770,
+                      n_scales: int = 5,
+                      gabor_sigma: int = 25,
+                      noise_type: str = 'sinusoid',
+                      seed: int = 1):
+    # Get all local variables, and pipe the ones needed for the postprocessing pipelines
     img_size = get_image_size(base_image)
     # if stimuli_params is passed, no need to recompute it
     if stimuli_params is None:
         stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
-    patches, patch_idx = __generate_noise_pattern(img_size=img_size, n_scales=n_scales, noise_type=noise_type, sigma=sigma)
-
-    ci, combined = compute_ci(base_image = base_image,
-                              responses = responses,
-                              stimuli_params = stimuli_params,
-                              patches = patches,
-                              patch_idx= patch_idx,
-                              ci_postproc_pipe = ci_postproc_pipe,
-                              ci_postproc_kwargs = ci_postproc_kwargs,
-                              anti_ci = anti_ci,
-                              n_trials= n_trials,
-                              n_scales= n_scales,
-                              sigma = sigma,
-                              noise_type = noise_type,
-                              seed = seed)
+    if patches is None or patch_idx is None:
+        patches, patch_idx = __generate_noise_pattern(img_size=img_size, n_scales=n_scales, noise_type=noise_type, gabor_sigma=gabor_sigma)
     
-    # Get all local variables, and pipe the ones needed for the postprocessing pipelines, e.g. zmap, infoval, etc
-    local_variables = locals()
-    piped_local_variables = ['base_image', 'ci', 'stimuli_params', 'responses', 'patches', 'patch_idx', 'anti_ci', 'n_trials', 'n_scales', 'sigma', 'noise_type', 'seed']
-    local_variables = {key: local_variables[key] for key in piped_local_variables}
-
-    zmap = None
-    if zmap_pipe is not None:
-        if anti_ci:        
-            local_variables['stimuli_params'] = -stimuli_params
-        zmap = zmap_pipe(**local_variables, **zmap_kwargs)
-        
-    return ci, combined, zmap
+    kwargs = locals()
+    
+    results = []
+    for (pipeline, pipeline_kwargs) in pipelines:
+        kwargs.update(pipeline_kwargs)
+        kwargs['cache'] = None
+        if kwargs['use_cache']:
+            ext = get_extension_from_decorator(pipeline)
+            if ext is not None:
+                kwargs['cache'] = os.path.join(kwargs['path'], kwargs['save_folder'], f"{kwargs['id']}.{ext}")
+        sig = inspect.signature(pipeline)
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        result = pipeline(**filtered_kwargs)
+        kwargs.update(result)    
+        results.append(result)
+    return results
 
 def __generate_ci_noise(stimuli, responses, patches, patch_idx):
     """
