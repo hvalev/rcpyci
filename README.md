@@ -45,13 +45,14 @@ If you have experiment data created with the R `rcicr` package, you can still us
 The easiest way to export the parameter space is to use an environment which has a functional R environment as well as the `rpy2` python package. The easiest way is to use the docker container used in the tests since it already has both.
 You can start the container, add the correct parts to the environment variables and start the correct python interpreter as follows:
 ```
-docker run -it -w /tests -v ./data:/data hvalev/rcpyci  /bin/bash
+docker run -it -w / -v ./data:/data hvalev/rcpyci  /bin/bash
 export R_HOME=/usr/local/lib/R && export LD_LIBRARY_PATH=/usr/local/lib/R/lib:/usr/local/lib/R/
 /pyrcicr/bin/python3
 ```
 Make sure that you have your RData file created by `rcicr` in the `./data` folder. Afterwards you need to load and convert to to a numpy array like this:
 ```
 import rpy2.robjects as robjects
+import numpy as np
 robjects.r['load']("/data/test.RData")
 z = np.array(robjects.conversion.rpy2py(robjects.r['stimuli_params']))
 z.shape
