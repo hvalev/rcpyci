@@ -28,7 +28,8 @@ verify_data(sample_data)
 base_face_path = "./base_face.jpg"
 analyze_data(sample_data, base_face_path, n_trials=500)
 ```
-In reality, you will instead load your own dataframe and pass the arguments used in generating the stimulus image to the `analyze_data` function as well as any additional tweaks you want to apply. For more information, check the method signature
+In reality, you will instead load your own dataframe and pass the arguments used in generating the stimulus image to the `analyze_data` function as well as any additional tweaks you want to apply. For more information, check the method signature. Be mindful that the library makes use of `joblib` to parallelize computation and spawns `n_jobs` python processes to handle each data 'split' in the dataframe. If you're using `analyze_data` from the `interface` namespace, that would be split by participant and condition. As such you should make sure that you have enough memory for the number of concurrent processes. Typically if you have around 20GB RAM, you could use around 6-8 concurrent jobs. After the initial workloads have been assigned the memory usage normalizes, since the computation is not stuck simultaneously on memory intensive tasks (such as computing zmaps on the parameter space). The easiest way to find the optimal number of concurrent jobs is by trial and error.
+
 
 ## What is in this package
 The package includes 4 main namespaces:
