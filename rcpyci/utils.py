@@ -2,6 +2,7 @@
 File Name: core.py
 Description: object to object part of the library, for any interaction and interfacing with files, check interface.py
 """
+import logging
 import os
 import random
 from functools import wraps
@@ -12,6 +13,7 @@ from PIL import Image
 
 from .im_ops import save_image
 
+logging.basicConfig(level=logging.INFO)
 
 def cache_as_numpy(func):
     """
@@ -40,13 +42,14 @@ def cache_as_numpy(func):
         cache_path = kwargs.get('cache')
 
         if cache_path and os.path.exists(cache_path):
-            print(f'Cache hit for {cache_path}')
+            logging.info(f'Cache hit for {cache_path}')
             result = np.load(cache_path)
             return {key: result[key] for key in result.files}
         
         result = func(*args, **kwargs)
         
         if cache_path:
+            logging.info(f'Cache saved for {cache_path}')
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
             np.savez(cache_path, **result)
         
