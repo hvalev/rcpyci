@@ -6,6 +6,11 @@ rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images python i
 - cache intermediary results for further analyses
 - generic way to add additional pipelines for computing anything on the ci- or parameter-space
 
+## What is in this package
+The package includes 4 main namespaces:
+`core` contains all the core functionality for creating the stimulus images and computing the classification images. The functions within the `core` namespace work directly with arrays representing the images or various intermediary results. `interface` is a convenience namespace which contains functions used by the user to easily create the stimuli or compute the classification images. `pipelines` is a namespace which defines how the classification images are calculated as well as functions for computing zmaps on the CI space or the stimulus parameter space. `im_ops` is a namespace which defines operations on image arrays and `utils` contains some helper functions.
+__NOTE__: `infoval` is a port of the `infoval` functionality from the originl rcicr package, but it is untested.
+
 ## How to generate stimuli for a 2IFC task
 To generate stimuli for a 2IFC task, the following snippet would be enough for the basic use case. Be mindful that this uses a base_face image which is included in the repository under `tests`.
 ```
@@ -30,13 +35,7 @@ analyze_data(sample_data, base_face_path, n_trials=500)
 ```
 In reality, you will instead load your own dataframe and pass the arguments used in generating the stimulus image to the `analyze_data` function as well as any additional tweaks you want to apply. For more information, check the method signature. Be mindful that the library makes use of `joblib` to parallelize computation and spawns `n_jobs` python processes to handle each data 'split' in the dataframe. If you're using `analyze_data` from the `interface` namespace, that would be split by participant and condition. As such you should make sure that you have enough memory for the number of concurrent processes. Typically if you have around 20GB RAM, you could use around 6-8 concurrent jobs. After the initial workloads have been assigned the memory usage normalizes, since the computation is not stuck simultaneously on memory intensive tasks (such as computing zmaps on the parameter space). The easiest way to find the optimal number of concurrent jobs is by trial and error.
 
-
-## What is in this package
-The package includes 4 main namespaces:
-`core` contains all the core functionality for creating the stimulus images and computing the classification images. The functions within the `core` namespace work directly with arrays representing the images or various intermediary results. `interface` is a convenience namespace which contains functions used by the user to easily create the stimuli or compute the classification images. `pipelines` is a namespace which defines how the classification images are calculated as well as functions for computing zmaps on the CI space or the stimulus parameter space. `im_ops` is a namespace which defines operations on image arrays and `utils` contains some helper functions.
-__NOTE__: `infoval` is a port of the `infoval` functionality from the originl rcicr package, but it is untested.
-
-### Custom pipelines for post-processing CIs
+## Custom pipelines for post-processing CIs
 You can write your own pipelines for computing further information on classification images and a number of internals exposed to the pipelines. 
 
 An example speaks a thousand words:
@@ -75,13 +74,14 @@ In this example we create a pipeline that adds 1000 to the seed of each trial. W
 
 Of course, this is meaningless, but it provides a skeleton code and example of how to create your own pipelines, how to use caching, how to use internal parameters involved in the creation of the stimulus images, as well as pipeline-specific kwargs, and how to pass variables between pipelines.
 
+
+# Compatibility with R's rcicr
+The implementation should produce the same results between this one and R's implementations with a few considerations to be made. First, there are differences in how `R` and `python's` `numpy` and `random` packages generate random numbers. This results in the underlying generated parameter distribution used in creating the stimulus material is not interchangeable using the same seed. The margin of errors being introduced by rounding errors and differences in implementation, the biggest being at computing the cis of a participant at `~0.0005`. The complete test suite can be ran by running the `run_tests.sh` script from inside the `ref` folder in this repository. More info [here](ref/README.md).
+
 ### How does this compare to the R package
 The core part of the package is intended to be equivalent to R's implementation. However, as this package relies on numpy for most of the numeric computations and by leveraging numpy's broadcasting for parallelizing operations, this has led to dramatic speed increases and stable memory use. In addition, the architecture of the package allows people with little coding experince to be able to use the package by utilizing the user-friendly `interface` namespace, while also allowing seasoned users to directly access some lower-level interfaces and write their own image processing pipelines. Also, by seeding the random number generator for creating the noise pattern, the stimulus images can be reproduced provided the same seed is used. Finally, the package allows some degree of interoperability with the R package. More on that in the next section.
 
-## Compatibility to R's rcicr
-The implementation should produce the same results between this one and R's implementations with a few considerations to be made. First, there are differences in how `R` and `python's` `numpy` and `random` packages generate random numbers. This results in the underlying generated parameter distribution used in creating the stimulus material is not interchangeable using the same seed. The margin of errors being introduced by rounding errors and differences in implementation, the biggest being at computing the cis of a participant at `~0.0005`. The complete test suite can be ran by running the `run_tests.sh` script from inside the `ref` folder in this repository. More info [here](ref/README.md).
-
-## How to use R stimuli in rcpyci
+## How to use rcicr stimuli in rcpyci
 If you have experiment data created with the R `rcicr` package, you can still use `rcpyci` to process your data. As the random number generation approaches between python and R are not interchangeable, the parameter space generated by `rcicr` needs to be exported. After that, you can process your data using the faster or more extensible `rcpyci`. 
 
 The easiest way to export the parameter space is to use an environment which has a functional R environment as well as the `rpy2` python package. The easiest way is to use the docker container used in the tests since it already has both.
