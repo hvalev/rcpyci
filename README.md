@@ -8,7 +8,8 @@ rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images python i
 
 ## What is in this package
 The package includes 4 main namespaces:
-`core` contains all the core functionality for creating the stimulus images and computing the classification images. The functions within the `core` namespace work directly with arrays representing the images or various intermediary results. `interface` is a convenience namespace which contains functions used by the user to easily create the stimuli or compute the classification images. `pipelines` is a namespace which defines how the classification images are calculated as well as functions for computing zmaps on the CI space or the stimulus parameter space. `im_ops` is a namespace which defines operations on image arrays and `utils` contains some helper functions.
+`core` contains all the core functionality for creating the stimulus images and computing the classification images. The functions within the `core` namespace work directly with arrays representing the images or various intermediary results. `interface` is a user-friendly interface which sits between `core` and the user and makes the creation of stimuli for a 2AFC task or the interpretation of results easy. `pipelines` contains pipelines which can be chained to process the results of a 2afc task. By default, everything is computed for each participant and condition split including the classification images and their inverse, both ways of computing zmaps -- on cis and parameter space, and caching intermediary data. However, a user may add additional processing pipelines to further generate useful variations of the data for analysis. More on that in the [custom pipeline section](#custom-processing-pipelines). `im_ops` is a namespace which defines operations on image arrays and `utils` contains some helper functions.
+
 __NOTE__: `infoval` is a port of the `infoval` functionality from the originl rcicr package, but it is untested.
 
 ## How to generate stimuli for a 2IFC task
@@ -35,7 +36,7 @@ analyze_data(sample_data, base_face_path, n_trials=500)
 ```
 In reality, you will instead load your own dataframe and pass the arguments used in generating the stimulus image to the `analyze_data` function as well as any additional tweaks you want to apply. For more information, check the method signature. Be mindful that the library makes use of `joblib` to parallelize computation and spawns `n_jobs` python processes to handle each data 'split' in the dataframe. If you're using `analyze_data` from the `interface` namespace, that would be split by participant and condition. As such you should make sure that you have enough memory for the number of concurrent processes. Typically if you have around 20GB RAM, you could use around 6-8 concurrent jobs. After the initial workloads have been assigned the memory usage normalizes, since the computation is not stuck simultaneously on memory intensive tasks (such as computing zmaps on the parameter space). The easiest way to find the optimal number of concurrent jobs is by trial and error.
 
-## Custom pipelines for post-processing CIs
+## Custom processing pipelines
 You can write your own pipelines for computing further information on classification images and a number of internals exposed to the pipelines. 
 
 An example speaks a thousand words:
