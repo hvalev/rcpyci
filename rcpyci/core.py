@@ -121,7 +121,7 @@ def process_pipelines(base_image: np.ndarray,
     for (pipeline, pipeline_kwargs) in pipelines:
         kwargs.update(pipeline_kwargs)
         kwargs['cache'] = None
-        if kwargs['use_cache']:
+        if 'use_cache' in kwargs and kwargs['use_cache']:
             ext = get_extension_from_decorator(pipeline)
             if ext is not None:
                 kwargs['cache'] = os.path.join(kwargs['path'], kwargs['save_folder'], f"{kwargs['id']}.{ext}")
