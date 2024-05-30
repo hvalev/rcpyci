@@ -144,65 +144,28 @@ def compute_zmap_stimulus_params(base_image, ci, stimuli_params, responses, patc
 
 ### Compute infoval on a ci as a postprocessing pipeline
 
-compute_infoval_2IFC_pipeline_kwargs = {
-    'iter': 10000,
-    'name': 'infoval', 
-    'save_output': True,
+compute_infoval_2ifc_pipeline_kwargs = {
+    'path_to_reference_norms': None,
+    'use_cache': True,
+    'save_folder': 'infoval'
 }
 
-def compute_infoval_2ifc_pipeline(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed, iter=10000):
-    # target_ci, reference_norms
-    # generate reference norms
-    from .utils import generate_reference_distribution_2ifc
-
-    img_size = get_image_size(base_image)
+@cache_as_numpy
+def compute_infoval_2ifc_pipeline(ci, path_to_reference_norms, cache=None):
+    ref_norms = np.load(path_to_reference_norms)
+    from .infoval import compute_info_val_2ifc
+    info_val, cinorm, ref_median, ref_mad, ref_iter = compute_info_val_2ifc(target_ci=ci,
+                                                                            reference_norms=ref_norms)
     
-
-    reference_norms = generate_reference_distribution_2ifc(n_trials,
-                                         img_size, 
-                                         n_scales, 
-                                         noise_type, 
-                                         sigma, 
-                                         seed=seed,
-                                         stimuli_params = None, 
-                                         patches = None,
-                                         patch_idx = None,
-                                         iter=10000)
-
-    # Compute reference values
-    ref_median = np.median(reference_norms)
-    ref_mad = np.median(np.abs(reference_norms - ref_median))
-    ref_iter = len(reference_norms)
-
-    # Compute informational value metric
-    cinorm = norm(ci, 'f')
-    info_val = (cinorm - ref_median) / ref_mad
-
-    # print(f"Informational value: z = {info_val} (ci norm = {cinorm}; reference median = {ref_median}; MAD = {ref_mad}; iterations = {ref_iter})")
-    result = {
-        'info': info_val,
-        'cinorm': cinorm,
-        'median': ref_median,
-        'mad': ref_mad,
-        'iter': ref_iter
+    return {
+        "info_val": info_val,
+        "cinorm": cinorm,
+        "ref_median": ref_median,
+        "ref_mad": ref_mad,
+        "ref_iter": ref_iter
     }
 
-    return result
 
-# skeleton pipeline
-sample_pipe_generator_kwargs = {
-}
-
-@cache_as_numpy
-def sample_pipe_generator(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
-    return
-
-sample_pipe_receiver_kwargs = {
-}
-
-@cache_as_numpy
-def sample_pipe_receiver(base_image, ci, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, sigma, noise_type, seed):
-    return
 
 
 full_pipeline = [
