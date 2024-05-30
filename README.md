@@ -64,6 +64,6 @@ np.save('/data/stimulus.npy', t)
 t.max()
 t.min()
 ```
-In fact, the last 2 commands should show approx. 0.99(9) and -0.99(9)
+In fact, the last 2 commands should yield approx. 0.99(9) and -0.99(9) respectively.
 
-With the stimulus.npy file in place you can analyze your data with `rcpyci` by feeding the contents in the `stimulus_param` variable in the `analyze_data` function in `rcpyci.interface`. This would disable re-generating the parameter space using the provided seed value and use the sideloaded parameter space instead.
+With the stimulus.npy file in place you can analyze your data with `rcpyci` by feeding the contents in the `stimulus_param` variable in the `analyze_data` function in `rcpyci.interface`. This would disable re-generating the parameter space using the provided seed value and use this sideloaded parameter space instead. You must make sure that you provide matching parameters for `n_scales` and `n_trials` so that the patches and patch indices are generated with the correct array dimensions.
