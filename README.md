@@ -34,7 +34,7 @@ In reality, you will instead load your own dataframe and pass the arguments used
 ## What is in this package
 The package includes 4 main namespaces:
 `core` contains all the core functionality for creating the stimulus images and computing the classification images. The functions within the `core` namespace work directly with arrays representing the images or various intermediary results. `interface` is a convenience namespace which contains functions used by the user to easily create the stimuli or compute the classification images. `pipelines` is a namespace which defines how the classification images are calculated as well as functions for computing zmaps on the CI space or the stimulus parameter space. `im_ops` is a namespace which defines operations on image arrays and `utils` contains some helper functions.
-__NOTE__: `infoval` is a port of the `infoval` functionality from the originl package, but it is untested.
+__NOTE__: `infoval` is a port of the `infoval` functionality from the originl rcicr package, but it is untested.
 
 ### Custom pipelines for post-processing CIs
 You can write your own pipelines for computing further information on classification images and a number of internals exposed to the pipelines. 
