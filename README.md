@@ -1,5 +1,10 @@
 # rcpyci 🌶️
-r-cpyci (/ɑr ˈspaɪsi/) is a python implementation of the R package [rcicr](https://github.com/rdotsch/rcicr/) to perform research using the reverse correlation classification images. The package allows to generate stimulus images for experiments and also generate cis for participants or conditions.
+rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images python implementation closely mirroring the R package [rcicr](https://github.com/rdotsch/rcicr/). rcpyci can do everything the R package can, while much easier to install thanks to the extensive python package ecosystem and much faster due to numpy's broadcasting and parallel processing. rcpyci supports the following tasks:
+- generate stimulus images for 2afc tasks
+- create classification images from 2afc tasks split by participant or condition
+- compute zmaps on classification images or parameter space
+- cache intermediary results for further analyses
+- generic way to add additional pipelines for computing anything on the ci- or parameter-space
 
 ## How to generate stimuli for a 2IFC task
 To generate stimuli for a 2IFC task, the following snippet would be enough for the basic use case. Be mindful that this uses a base_face image which is included in the repository under `tests`.
