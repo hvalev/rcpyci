@@ -36,8 +36,44 @@ The package includes 4 main namespaces:
 `core` contains all the core functionality for creating the stimulus images and computing the classification images. The functions within the `core` namespace work directly with arrays representing the images or various intermediary results. `interface` is a convenience namespace which contains functions used by the user to easily create the stimuli or compute the classification images. `pipelines` is a namespace which defines how the classification images are calculated as well as functions for computing zmaps on the CI space or the stimulus parameter space. `im_ops` is a namespace which defines operations on image arrays and `utils` contains some helper functions.
 __NOTE__: `infoval` is a port of the `infoval` functionality from the originl package, but it is untested.
 
-### Custom pipelines for processing CIs or zmaps
-You can write your own pipeline for computing zmaps. In pipelines.py you can find skeleton code for a pipeline, where the signature of the function includes all default keyword arguments passed from the compute_ci_and_zmaps internals to avoid repeating the same computations when analyzing your data. In addition, further keyword arguments can be provided by passing a dictionary with the key-value pairs.  
+### Custom pipelines for post-processing CIs
+You can write your own pipelines for computing further information on classification images and a number of internals exposed to the pipelines. 
+
+An example speaks a thousand words:
+```
+from rcpyci.interface import analyze_data
+from rcpyci.utils import create_test_data, verify_data, cache_as_numpy
+
+sample_data = create_test_data(n_trials=500)
+verify_data(sample_data)
+base_face_path = "./base_face.jpg"
+
+sample_pipe_generator_kwargs = {
+    'addition': 1000
+}
+
+def sample_pipe_generator(seed, addition):
+    return {'modified_seed': seed + addition}
+
+sample_pipe_receiver_kwargs = {
+    'use_cache': True,
+    'save_folder': 'sample'
+}
+
+@cache_as_numpy
+def sample_pipe_receiver(modified_seed, cache=None):
+    return {'modified_seed': modified_seed}
+
+pipelines = [
+    (sample_pipe_generator, sample_pipe_generator_kwargs),
+    (sample_pipe_receiver, sample_pipe_receiver_kwargs)
+]
+
+analyze_data(sample_data, base_face_path, pipelines=pipelines, n_trials=500)
+```
+In this example we create a pipeline that adds 1000 to the seed of each trial. We then cache the results as numpy arrays and save them in the `sample` folder. In the generator, we use the `seed` variable as well as a pipeline-specific `addition` keyword argument. We then return a variable called `modified_seed` which is used by second, receiver pipeline. There, we use caching and store this variable as a numpy array.
+
+Of course, this is meaningless, but it provides a skeleton code and example of how to create your own pipelines, how to use caching, how to use internal parameters involved in the creation of the stimulus images, as well as pipeline-specific kwargs, and how to pass variables between pipelines.
 
 ### How does this compare to the R package
 The core part of the package is intended to be equivalent to R's implementation. However, as this package relies on numpy for most of the numeric computations and by leveraging numpy's broadcasting for parallelizing operations, this has led to dramatic speed increases and stable memory use. In addition, the architecture of the package allows people with little coding experince to be able to use the package by utilizing the user-friendly `interface` namespace, while also allowing seasoned users to directly access some lower-level interfaces and write their own image processing pipelines. Also, by seeding the random number generator for creating the noise pattern, the stimulus images can be reproduced provided the same seed is used. Finally, the package allows some degree of interoperability with the R package. More on that in the next section.
