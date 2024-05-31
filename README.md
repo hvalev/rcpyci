@@ -1,5 +1,5 @@
 # rcpyci 🌶️
-rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images python implementation closely mirroring the R package [rcicr](https://github.com/rdotsch/rcicr/). rcpyci can do everything the R package can, while much easier to install thanks to the extensive python package ecosystem and much faster due to numpy's broadcasting and parallel processing. rcpyci supports the following tasks:
+rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images python implementation closely mirroring the R package [rcicr](https://github.com/rdotsch/rcicr/). rcpyci can do everything the R package can, while much easier to install thanks to the extensive python package ecosystem and much faster due to numpy's broadcasting and joblib's parallel processing. rcpyci supports the following tasks:
 - generate stimulus images for 2afc tasks
 - create classification images from 2afc tasks split by participant or condition
 - compute zmaps on classification images or parameter space
