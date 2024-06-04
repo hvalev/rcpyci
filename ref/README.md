@@ -13,8 +13,6 @@ Some slight modifications have been made to the original [rcicr] package. The pa
 ## Running the test suite
 To run the test suite a single script simply run `./run_tests.sh` from within the `./ref/` folder. This will 1) build the environment required to execute R and python code 2) install the modified rcicr library and necessary python packages and 3) run all the tests and report the results to the terminal. Building the image may take between 10 to 20 minutes, depending on your hardware and internet speed. Running the tests could take up to 2 minutes.
 
-
-
 ## Further reading
 R uses a column major ordering of its arrays (fortran style), while python uses a row major ordering of its arrays (c style). This means that sometimes arrays need to be reshaped before comparing them. Luckily, in python this is a very simple operation as follows:
 `result_p = result_python.reshape(result_r.shape, order='F')`
