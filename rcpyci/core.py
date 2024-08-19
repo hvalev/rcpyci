@@ -66,8 +66,8 @@ def compute_ci(base_image: np.ndarray,
 def process_pipelines(base_image: np.ndarray,
                       responses: np.ndarray,
                       pipelines: List[Tuple[Callable, dict]],
-                      id: str,
-                      path: str,
+                      pipeline_id: str,
+                      experiment_path: str,
                       stimuli_params: np.ndarray = None,
                       patches: np.ndarray = None,
                       patch_idx: np.ndarray = None,
@@ -120,11 +120,11 @@ def process_pipelines(base_image: np.ndarray,
     results = []
     for (pipeline, pipeline_kwargs) in pipelines:
         kwargs.update(pipeline_kwargs)
-        kwargs['cache'] = None
+        kwargs['cache_path'] = None
         if 'use_cache' in kwargs and kwargs['use_cache']:
             ext = get_extension_from_decorator(pipeline)
             if ext is not None:
-                kwargs['cache'] = os.path.join(kwargs['path'], kwargs['save_folder'], f"{kwargs['id']}.{ext}")
+                kwargs['cache_path'] = os.path.join(kwargs['experiment_path'], kwargs['save_folder'], f"{kwargs['pipeline_id']}.{ext}")
         sig = inspect.signature(pipeline)
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
         result = pipeline(**filtered_kwargs)

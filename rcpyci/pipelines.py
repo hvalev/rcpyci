@@ -23,7 +23,7 @@ compute_ci_kwargs = {
 }
 
 @cache_as_numpy
-def compute_ci(base_image, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, gabor_sigma, noise_type, seed, cache=None):
+def compute_ci(base_image, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, gabor_sigma, noise_type, seed, cache_path=None):
     from .core import compute_ci
     ci = compute_ci(base_image=base_image,
                     responses=responses,
@@ -56,19 +56,16 @@ combine_ci_kwargs = {
 }
 
 @cache_as_image
-def combine_ci(base_image, ci, mask=None, scaling='independent', scaling_constant=0.1, cache=None):
+def combine_ci(base_image, ci, mask=None, scaling='independent', scaling_constant=0.1, cache_path=None):
     """
     Postprocess a classification image (ci) using various scaling and masking techniques.
 
     Parameters:
         base_image: The original image.
         ci: The classification image to postprocess.
-        stimuli_params: TBD
-        responses: TBD
-        patches: TBD
-        patch_idx: TBD
         mask: Optional mask to apply to the classification image. Defaults to None.
-        scaling: One of 'independent' or 'constant'. If 'independent', each pixel in ci is scaled independently. If 'constant', all pixels are scaled by a constant factor. Defaults to 'independent'.
+        scaling: One of 'independent' or 'constant'. If 'independent', each pixel in ci is scaled independently. 
+                 If 'constant', all pixels are scaled by a constant factor. Defaults to 'independent'.
         scaling_constant: The constant scaling factor to use if scaling='constant'. Defaults to 0.1.
 
     Returns:
@@ -91,7 +88,7 @@ compute_zmap_ci_kwargs = {
 }
 
 @cache_as_numpy
-def compute_zmap_ci(ci, sigma, threshold, cache=None):
+def compute_zmap_ci(ci, sigma, threshold, cache_path=None):
     """
     Compute a z-score map from a classification image (CI) by applying Gaussian filtering and thresholding.
 
@@ -115,7 +112,7 @@ compute_zmap_stimulus_params_kwargs = {
 }
 
 @cache_as_numpy
-def compute_zmap_stimulus_params(base_image, ci, stimuli_params, responses, patches, patch_idx, cache=None):
+def compute_zmap_stimulus_params(base_image, ci, stimuli_params, responses, patches, patch_idx, cache_path=None):
     """
     Compute a z-score map from a classification image (CI) by applying t-test and thresholding.
 
@@ -151,7 +148,7 @@ compute_infoval_2ifc_pipeline_kwargs = {
 }
 
 @cache_as_numpy
-def compute_infoval_2ifc_pipeline(ci, path_to_reference_norms, cache=None):
+def compute_infoval_2ifc_pipeline(ci, path_to_reference_norms, cache_path=None):
     ref_norms = np.load(path_to_reference_norms)
     from .infoval import compute_info_val_2ifc
     info_val, cinorm, ref_median, ref_mad, ref_iter = compute_info_val_2ifc(target_ci=ci,

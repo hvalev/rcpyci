@@ -39,7 +39,7 @@ def cache_as_numpy(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        cache_path = kwargs.get('cache')
+        cache_path = kwargs.get('cache_path')
 
         if cache_path and os.path.exists(cache_path):
             logging.info(f'Cache hit for {cache_path}')
@@ -78,7 +78,7 @@ def cache_as_image(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        cache_path = kwargs.get('cache')
+        cache_path = kwargs.get('cache_path')
 
         result = func(*args, **kwargs)
         
