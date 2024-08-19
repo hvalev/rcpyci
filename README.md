@@ -1,32 +1,39 @@
 # rcpyci 🌶️
-rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images python implementation closely mirroring the R package [rcicr](https://github.com/rdotsch/rcicr/). rcpyci can do everything the R package can, while much easier to install thanks to the extensive python package ecosystem and much faster due to numpy's broadcasting and joblib's parallel processing. rcpyci supports the following tasks:
-- generate stimulus images for 2afc tasks
-- create classification images from 2afc tasks split by participant or condition
+rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images toolbox for generating classification images for 2AFC experiments and analyzing experiment results. rcpyci supports the following tasks:
+- generate stimulus images for 2AFC tasks
+- create classification images from 2AFC tasks split by participant or condition
 - compute zmaps on classification images or parameter space
-- cache intermediary results for further analyses
-- generic way to add additional pipelines for computing anything on the ci- or parameter-space
+- generic way to add additional pipelines for computing anything on the ci- or parameter space
+- caching of intermediary results
+- generating the parameter space using a seed
+
+## How does this compare to the [rcicr](https://github.com/rdotsch/rcicr/) R package
+The implementation of the core functions closely mirrors that of `rcicr`, but `rcpyci` is much faster, easy to use, and future-proof as it depends on a few regularly maintained python packages. Additionally, `rcpyci` exposes a way for the user to implement their own custom processing pipelines without needing to modify the source code. And it has caching and seeding.
+#TODO
 
 ## What is in this package
-The package includes 4 main namespaces:
-`core` contains all the core functionality for creating the stimulus images and computing the classification images. The functions within the `core` namespace work directly with arrays representing the images or various intermediary results. `interface` is a user-friendly interface which sits between `core` and the user and makes the creation of stimuli for a 2AFC task or the interpretation of results easy. `pipelines` contains pipelines which can be chained to process the results of a 2afc task. By default, everything is computed for each participant and condition split including the classification images and their inverse, both ways of computing zmaps -- on cis and parameter space, and caching intermediary data. However, a user may add additional processing pipelines to further generate useful variations of the data for analysis. More on that in the [custom pipeline section](#custom-processing-pipelines). `im_ops` is a namespace which defines operations on image arrays and `utils` contains some helper functions.
+The main components in this package are split in 5 namespaces:
+- `core`: Functions for creating stimulus images and computing classification images using pure numpy arrays.
+- `interface`: User-friendly interface for setting up experiments and analyzing data, wrapping the functionality of `core`.
+- `pipelines`: A collection of functions for computing cis, zmaps, and others, executed in sequence on 2AFC task results. More on that in the [Default processing pipelines](#default-processing-pipelines) section.
+- `im_ops`: Operations on image arrays.
+- `utils`: Helper functions.
 
-__NOTE__: `infoval` is a port of the `infoval` functionality from the originl rcicr package, but it is untested.
+__NOTE__: `infoval` is a port of the `infoval` functionality from the original `rcicr` package, but it is untested.
 
-## How to generate stimuli for a 2IFC task
-To generate stimuli for a 2IFC task, the following snippet would be enough for the basic use case. Be mindful that this uses a base_face image which is included in the repository under `tests`.
+## How to generate stimuli for a 2AFC task
+Here is how you can generate 2AFC task stimuli:
 ```python
 from rcpyci.interface import setup_experiment
 base_face_path = "./base_face.jpg"
 setup_experiment(base_face_path)
 ```
-`setup_experiment` further exposes the parameters `n_trials`, `n_scales`, `sigma`, `noise_type`, `seed` to allow the user to tune how many trials will be generated as well as tweak the noise-generation parameters and select the seed used for randomization. Check the documentation of `setup_experiment` for more information on how they can be tuned.
+__NOTE__: The input face image needs to be square-shaped.
 
-__NOTE__: Setup experiment will leave a folder with a file that contains the variables used to generate the stimuli for the 2AFC task. While the file is not directly used further in the process, you need to input the same parameters when analyzing your data including the seed used. The package can then regenerate the stimuli.
+`setup_experiment` further exposes the parameters `n_trials`, `n_scales`, `gabor_sigma`, `noise_type` to control the noise generation and `seed` for reproducibility. Check the docstrings of `setup_experiment` for more information.
 
-## How to analyze my data
-To make analyzing your data easier, the results need to be stored as a single dataframe with 5 columns: `idx`, `condition`, `participant_id`, `stimulus_id` and `responses`. The `idx` column is just the row identifier and is not used. `condition` is the condition that was used for each trial, (e.g. the question variation asked to a participant in case you asked multiple questions). In case a single condition is investigated, then there will be a single value. `participant_id` is a unique identifier for each participant in your experiment. `stimulus_id` is a unique identifier for each stimulus (pair of original and inverted images generated by setup_experiment) and `responses` is the response that was given by each participant for each stimulus image pair (the choice between the original or inverted image). If a participant has selected the original image, then the response is `1`, otherwise it must be marked as `-1`. Since your image pairs will likely be randomized, they are automatically sorted for each participant or condition split, so you don't need to sort it yourself.
-
-You can generate sample response data and try out the analysis function like this:
+## How to analyze data from an experiment
+The following snippet shows how experiment data can be analyzed. Here we are using some generated sample data.
 ```python
 from rcpyci.interface import analyze_data
 from rcpyci.utils import create_test_data, verify_data
@@ -36,12 +43,27 @@ verify_data(sample_data)
 base_face_path = "./base_face.jpg"
 analyze_data(sample_data, base_face_path, n_trials=500)
 ```
-In reality, you will instead load your own dataframe and pass the arguments used in generating the stimulus image to the `analyze_data` function as well as any additional tweaks you want to apply. For more information, check the method signature. Be mindful that the library makes use of `joblib` to parallelize computation and spawns `n_jobs` python processes to handle each data 'split' in the dataframe. If you're using `analyze_data` from the `interface` namespace, that would be split by participant and condition. As such you should make sure that you have enough memory for the number of concurrent processes. Typically if you have around 20GB RAM, you could use around 6-8 concurrent jobs. After the initial workloads have been assigned the memory usage normalizes, since the computation is not stuck simultaneously on memory intensive tasks (such as computing zmaps on the parameter space). The easiest way to find the optimal number of concurrent jobs is by trial and error.
+__NOTE__: `analyze_data` takes a dataframe with 5 columns: `idx`, `condition`, `participant_id`, `stimulus_id` and `responses`. 
+`idx` is the row identifier, `condition` is the condition that was used for each trial, (e.g. the question variation asked to a participant). If a single condition is tested, the column will have a single value. `participant_id` is an identifier for each participant. `stimulus_id` is an identifier for each stimulus (pair of original and inverted images generated by setup_experiment). `responses` is the response that was given by each participant for each stimulus image pair. If a participant has selected the original response image, then the value should be coded as `1`, if the inverted response image is selected -- as `-1`. There is no need to sort by stimulus ids as that is taken care of in the method.
 
-## Custom processing pipelines
-You can write your own pipelines for computing further information on classification images and a number of internals exposed to the pipelines. 
+__NOTE__: To speed-up computation, you can allocate multiple cores using `n_jobs`. It's a balancing game between number of cpu cores and available RAM. If you have around 20GB RAM, you could use around 6 concurrent jobs. The default parameter configuration uses caching, so you could stop and resume the computation at a later point without losing any progress.
 
-An example speaks a thousand words:
+## Default processing pipelines
+The default processing pipelines are defined in `pipelines.full_pipeline`. A quick look: 
+```
+full_pipeline = [
+    (compute_ci, compute_anti_ci_kwargs),
+    (combine_ci, combine_anti_ci_kwargs),
+    (compute_ci, compute_ci_kwargs),
+    (combine_ci, combine_ci_kwargs),
+    (compute_zmap_ci, compute_zmap_ci_kwargs),
+    (compute_zmap_stimulus_params, compute_zmap_stimulus_params_kwargs)
+]
+```
+Using the default pipelines, we compute in-order the ci, anti-ci, zmap on the ci and zmap on the parameter space for a given input, typically on a participant or a condition split with some sensible default parameters. This pipeline can be modified by adding or removing individual steps or modifying the `..._kwargs` parameters assigned to each of the steps.
+
+### Custom processing pipelines
+The pipelines can also be extended by adding your own functions with their respective parameters. Here is a simple example where we modify the seed and cache the modified seed as a numpy array in two steps.
 ```python
 from rcpyci.interface import analyze_data
 from rcpyci.utils import create_test_data, verify_data, cache_as_numpy
@@ -63,7 +85,7 @@ sample_pipe_receiver_kwargs = {
 }
 
 @cache_as_numpy
-def sample_pipe_receiver(modified_seed, cache=None):
+def sample_pipe_receiver(modified_seed, cache_path=None):
     return {'modified_seed': modified_seed}
 
 pipelines = [
@@ -73,27 +95,38 @@ pipelines = [
 
 analyze_data(sample_data, base_face_path, pipelines=pipelines, n_trials=500)
 ```
-In this example we create a pipeline that adds 1000 to the seed of each trial. We then cache the results as numpy arrays and save them in the `sample` folder. In the generator, we use the `seed` variable as well as a pipeline-specific `addition` keyword argument. We then return a variable called `modified_seed` which is used by second, receiver pipeline. There, we use caching and store this variable as a numpy array.
+__NOTE__: If you want to leverage caching, use the `@cache_as_numpy` decorator and add `cache_path=None` to the function signature.
 
-Of course, this is meaningless, but it provides a skeleton code and example of how to create your own pipelines, how to use caching, how to use internal parameters involved in the creation of the stimulus images, as well as pipeline-specific kwargs, and how to pass variables between pipelines.
-
+### Parameters always exposed to pipeline functions
+By default, the following parameters can be used within all pipeline functions:
+`base_image` - base image used in the experiment
+`responses` - sorted responses to the stimulus images in the current split. E.g, 1 or -1 mapping the choice to original or inverted noise images 
+`pipeline_id` - string combining the label and participant/codnition split. Used for caching.
+`experiment_path`- relative path where data will be stored
+`stimuli_params` - the parameter space used to generate the stimulus images
+`patches` - noise patches used to generate the original and inverted stimulus images 
+`patch_idx` - patch indices 
+`n_trials` - number of trials
+`n_scales` - number of scales used when generating the noise
+`gabor_sigma` - sigma parameter when using gabor noise
+`noise_type` - method used for generating noise. Either `sinusoid` or `gabor`
+`seed` - seed value
+To use either of them, just add the variable to the method signature. Be mindful that changing those values directly will persist for the rest of the pipeline run.
 
 # Compatibility with R's rcicr
-The implementation should produce the same results between this one and R's implementations with a few considerations to be made. First, there are differences in how `R` and `python's` `numpy` and `random` packages generate random numbers. This results in the underlying generated parameter distribution used in creating the stimulus material is not interchangeable using the same seed. The margin of errors being introduced by rounding errors and differences in implementation, the biggest being at computing the cis of a participant at `~0.0005`. The complete test suite can be ran by running the `run_tests.sh` script from inside the `ref` folder in this repository. More info [here](ref/README.md).
-
-## How does this compare to the R package
-The core part of the package is intended to be equivalent to R's implementation. However, as this package relies on numpy for most of the numeric computations and by leveraging numpy's broadcasting for parallelizing operations, this has led to dramatic speed increases and stable memory use. In addition, the architecture of the package allows people with little coding experince to be able to use the package by utilizing the user-friendly `interface` namespace, while also allowing seasoned users to directly access some lower-level interfaces and write their own image processing pipelines. Also, by seeding the random number generator for creating the noise pattern, the stimulus images can be reproduced provided the same seed is used. Finally, the package allows some degree of interoperability with the R package. More on that in the next section.
+The implementation should produce the same results between this one and R's implementations with a few caveats. First, there are differences in how pythons' `numpy` and R's `random` packages generate random numbers. Even though `rcpyci` and `rcicr` can both be seeded, the output will differ. Second, there differences in how certain operations in the underlying libraries are implemented, which results in small numerical differences, the biggest being at computing the cis with roughly `~0.0005` difference. A comparison between the analogous functions can be ran using the `run_tests.sh` script from the `ref` folder in this repository. More info on that [here](ref/README.md).
 
 ## How to use rcicr stimuli in rcpyci
-If you have experiment data created with the R `rcicr` package, you can still use `rcpyci` to process your data. As the random number generation approaches between python and R are not interchangeable, the parameter space generated by `rcicr` needs to be exported. After that, you can process your data using the faster or more extensible `rcpyci`. 
+If you have experiment data created with the R `rcicr` package, you can still use `rcpyci` to process your data. As the random number generation approaches between python and R are not interchangeable, the parameter space generated by `rcicr` needs to be exported. After that, you can process your data `rcpyci`. 
 
-The easiest way to export the parameter space is to use an environment which has a functional R environment as well as the `rpy2` python package. The easiest way is to use the docker container used in the tests since it already has both.
-You can start the container, add the correct parts to the environment variables and start the correct python interpreter as follows:
+The easiest way is to use the docker container which has a functional R environment as well as the necessary `rpy2` python package. It can be started as follows:
 ```bash
 docker run -it -w / -v ./data:/data hvalev/rcpyci  /bin/bash
 export R_HOME=/usr/local/lib/R && export LD_LIBRARY_PATH=/usr/local/lib/R/lib:/usr/local/lib/R/
 /pyrcicr/bin/python3
 ```
+__NOTE__: This will create a data folder in the current working dir on your host, where the exported parameter space will be stored.
+
 Make sure that you have your RData file created by `rcicr` in the `./data` folder. Afterwards you need to load and convert to to a numpy array like this:
 ```python
 import rpy2.robjects as robjects
@@ -109,6 +142,4 @@ np.save('/data/stimulus.npy', t)
 t.max()
 t.min()
 ```
-In fact, the last 2 commands should yield approx. 0.99(9) and -0.99(9) respectively.
-
-With the stimulus.npy file in place you can analyze your data with `rcpyci` by feeding the contents in the `stimulus_param` variable in the `analyze_data` function in `rcpyci.interface`. This would disable re-generating the parameter space using the provided seed value and use this sideloaded parameter space instead. You must make sure that you provide matching parameters for `n_scales` and `n_trials` so that the patches and patch indices are generated with the correct array dimensions.
+With the stimulus.npy file in place you can analyze your data with `rcpyci` by loading and passing the numpy array as `stimulus_param` in the `analyze_data` function in `rcpyci.interface`. This would disable re-generating the parameter space using the provided seed value and use this sideloaded parameter space instead. You must make sure that you provide matching parameters for `n_scales` and `n_trials` so that the patches and patch indices are generated with the correct array dimensions.
