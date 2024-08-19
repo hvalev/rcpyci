@@ -112,6 +112,39 @@ def get_extension_from_decorator(func):
         func = func.__wrapped__
     return None
 
+def pop_consumed_variables(consumed_vars, local_vars):
+    """pop out consumed variables from the local variables dictionary."""
+    return {k: v for k, v in local_vars.items() if k not in consumed_vars}
+
+def extract_sorted_responses(data: pd.DataFrame, condition=None, participant=None, n_trials=770, average=False):
+    """
+    Extracts and sorts responses from the data based on condition or participant.
+    
+    Args:
+        data (pd.DataFrame): The dataset containing responses.
+        condition (int, optional): The ID of the condition to filter by.
+        participant (int, optional): The ID of the participant to filter by.
+        n_trials (int): The number of trials.
+        average (bool): Whether to average responses across participants.
+
+    Returns:
+        np.ndarray: The sorted responses.
+    """
+    if condition is not None:
+        filtered_data = data[data['condition'] == condition]
+    elif participant is not None:
+        filtered_data = data[data['participant_id'] == participant]
+    else:
+        raise ValueError("Either condition or participant must be provided.")
+    
+    sorted_data = filtered_data.sort_values(by='stimulus_id')
+    
+    if average:
+        sorted_data = sorted_data.groupby('stimulus_id')['responses'].mean().reset_index()
+
+    sorted_responses = sorted_data['responses'].to_numpy().reshape(n_trials, 1)
+    return sorted_responses
+
 def create_test_data(n_participants:int=100, n_trials:int=770):
     # for sample data reproducibility
     seed = 42
