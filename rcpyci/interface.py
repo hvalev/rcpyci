@@ -16,6 +16,7 @@ from tqdm import tqdm
 from .core import generate_stimuli_2ifc, process_pipelines
 from .im_ops import read_image, save_image
 from .pipelines import full_pipeline
+from .utils import extract_sorted_responses, pop_consumed_variables
 
 logging.basicConfig(level=logging.INFO)
 
@@ -60,27 +61,18 @@ def process_condition(condition,
     Returns:
         results: A dictionary containing the processed visual stimuli and their corresponding responses.
     """
-    # pass along input variables apart from already consumed ones
-    kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['condition', 'data', 'experiment_path', 'label']
-    for key in consumed_variables:
-        kwargs.pop(key, None)
-    # Sort the dataframe by 'condition', 'participant_id', and 'stimulus_id'
-    sorted_data = data.sort_values(by=['condition', 'participant_id', 'stimulus_id'])
-    # Calculate the average response for each stimulus_id across participants within each condition
-    grouped_data = sorted_data.groupby(['condition', 'stimulus_id'])['responses'].mean().reset_index()
-    # extract data for a single condition and sort by stimulus_id
-    single_condition_data = grouped_data[grouped_data['condition'] == condition].sort_values(by='stimulus_id')
-    sorted_responses = single_condition_data['responses'].to_numpy().reshape(n_trials, 1)
+    kwargs = pop_consumed_variables(['condition', 'data', 'experiment_path', 'label'], locals())
+
+    sorted_responses = extract_sorted_responses(data, condition=condition, n_trials=n_trials, average=True)
     kwargs['responses'] = sorted_responses
     
     logging.info(f"Processing condition {condition}")
-    id = f"{label}_{condition}"
+    pipeline_id = f"{label}_{condition}"
     results = process_pipelines(base_image = base_image,
                                 responses = sorted_responses,
                                 pipelines = pipelines,
-                                id = id,
-                                path = experiment_path,
+                                pipeline_id = pipeline_id,
+                                experiment_path = experiment_path,
                                 stimuli_params = stimuli_params,
                                 patches = patches,
                                 patch_idx = patch_idx,
@@ -145,11 +137,7 @@ def process_conditions(conditions,
         Be mindful that with higher parallel jobs, the progress bar may become
         less accurate.
     """
-    # pass along input variables apart from already consumed ones
-    kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['conditions', 'n_jobs']
-    for key in consumed_variables:
-        kwargs.pop(key, None)
+    kwargs = pop_consumed_variables(['conditions', 'n_jobs'], locals())
     
     logging.info("Started calculating ci and zmaps for conditions. "
                     "Be mindful that with higher parallel jobs the progress bar becomes more inaccurate. "
@@ -204,24 +192,18 @@ def process_participant(participant,
     Returns:
         results: A dictionary containing the processed participant data and pipeline results.
     """
-    # pass along input variables apart from already consumed ones
-    kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['participant', 'data', 'experiment_path', 'label']
-    for key in consumed_variables:
-        kwargs.pop(key, None)
+    kwargs = pop_consumed_variables(['participant', 'data', 'experiment_path', 'label'], locals())
     
-    # get normalized order of responses for the participant and pass to kwargs
-    sorted_data = data[data['participant_id'] == participant].sort_values(by='stimulus_id')
-    sorted_responses = sorted_data['responses'].to_numpy().reshape(n_trials, 1)
+    sorted_responses = extract_sorted_responses(data, participant=participant, n_trials=n_trials, average=False)
     kwargs['responses'] = sorted_responses
 
     logging.info(f"Processing participant {participant}")
-    id = f"{label}_{participant}"
+    pipeline_id = f"{label}_{participant}"
     results = process_pipelines(base_image = base_image,
                                 responses = sorted_responses,
                                 pipelines = pipelines,
-                                id = id,
-                                path = experiment_path,
+                                pipeline_id = pipeline_id,
+                                experiment_path = experiment_path,
                                 stimuli_params = stimuli_params,
                                 patches = patches,
                                 patch_idx = patch_idx,
@@ -268,11 +250,7 @@ def process_participants(participants: list,
         result (list): A list of participant IDs with corresponding CI and zmap data.
 
     """
-    # pass along input variables apart from already consumed ones
-    kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['participants', 'n_jobs']
-    for key in consumed_variables:
-        kwargs.pop(key, None)
+    kwargs = pop_consumed_variables(['participants', 'n_jobs'], locals())
 
     logging.info("Started calculating ci and zmaps for individual participants.  " +
                   "Be mindful that with higher parallel jobs the progress bar becomes more inaccurate.  " +
@@ -344,11 +322,7 @@ def analyze_data(data: pd.DataFrame,
     
     os.makedirs(experiment_path, exist_ok=True)
 
-    # pass along input variables apart from already consumed ones
-    kwargs = {k: v for k, v in locals().items()}
-    consumed_variables = ['base_face_path', 'img_size', '__generate_stimuli_params', '__generate_noise_pattern', 'get_image_size']
-    for key in consumed_variables:
-        kwargs.pop(key, None)
+    kwargs = pop_consumed_variables(['base_face_path', 'img_size', '__generate_stimuli_params', '__generate_noise_pattern', 'get_image_size'], locals())
     
     participants = list(data['participant_id'].unique())
     kwargs['participants'] = participants
@@ -385,9 +359,10 @@ def setup_experiment(base_face_path: str,
         n_trials (int): Number of trials in the experiment. Default is 770.
         n_scales (int): Number of scales used for stimulus generation.
             Default is 5.
-        sigma (int): Sigma value used for Gaussian noise generation. Default
-            is 5.
+        gabor_sigma (int): Sigma value used for Gaussian noise generation. 
+            It is inly used when noise_type is 'gabor'. Default is 5. 
         noise_type (str): Type of noise to generate. Default is 'sinusoid'.
+            Another option is 'gabor'.
         experiment_path (str): Path where the experiment data will be saved.
             Default is './experiment'.
         label (str): Label for the experiment, used in file names and data
