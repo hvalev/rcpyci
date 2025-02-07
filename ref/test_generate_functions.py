@@ -97,7 +97,7 @@ assert result_dict['noise_type'] == result_noise_pattern_python_gabor['noise_typ
 # Test generateNoiseImage function using a static params file and the previous identical sinusoid noise
 # This effectively sideloads R's implementation equivalent of runif np.random.uniform array 
 # to test the following functions
-params = np.load('/data/params.npy')
+params = np.load('/tests/params.npy')
 import numpy as np
 from rpy2.robjects import numpy2ri
 
