@@ -1,17 +1,21 @@
-import sys
 import os
+import sys
+
 import numpy as np
+
 sys.path.append("/tests/pyrcicr_ref/pyrcicr_ref/")
 
 import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
 from generateCI import generate_CI, process_quick_zmap, process_ttest_zmap
+from rpy2.robjects.packages import importr
 
 package_name = "rcicr"
 package = importr(package_name)
 
 # little snippet to detect the created rdata/npz files needed to test the ci functions
 import glob
+
+
 def find_file(folder_path, extention):
     # Use glob to find all files with .RData extension in the specified folder
     return glob.glob(os.path.join(folder_path, extention))
@@ -93,6 +97,7 @@ if abs(result_r[3,:,:] - result_python['combined']).max() < 0.04:
 ######## Test zmap functions in separation ##########
 import numpy as np
 from rpy2.robjects import numpy2ri
+
 img_size = 512
 sigma = 3
 threshold = 1

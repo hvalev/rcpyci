@@ -1,11 +1,12 @@
 import os
+
 import numpy as np
-from scipy.stats import ttest_1samp, norm
-from scipy.ndimage import gaussian_filter
-from generate_noise import generate_sinusoid, generate_gabor, generate_noise_pattern, generate_scales
-from generateNoiseImage import generate_noise_image
 from generateCINoise import generate_ci_noise
+from generateNoiseImage import generate_noise_image
 from PIL import Image
+from scipy.ndimage import gaussian_filter
+from scipy.stats import norm, ttest_1samp
+
 
 # Main function
 def generate_CI(stimuli, responses, baseimage, rdata, participants=None,
@@ -122,9 +123,6 @@ def generate_CI(stimuli, responses, baseimage, rdata, participants=None,
 
 
 # Functions
-import numpy as np
-from scipy.stats import norm, ttest_1samp
-from scipy.ndimage import gaussian_filter
 
 def process_quick_zmap(ci, sigma, threshold):
     # Blur CI

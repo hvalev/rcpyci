@@ -1,16 +1,13 @@
 import os
 import random
+from datetime import datetime
 
 import numpy as np
-from PIL import Image
 from generate_noise import generate_noise_pattern
 from generateNoiseImage import generate_noise_image
-
-import os
-import numpy as np
-import random
+from PIL import Image
 from tqdm import tqdm
-from datetime import datetime
+
 
 def read_image(filename, grayscale=False):
     img = Image.open(filename)

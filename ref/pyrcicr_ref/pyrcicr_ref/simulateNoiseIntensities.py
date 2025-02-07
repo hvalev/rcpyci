@@ -1,11 +1,9 @@
-import random
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
-
 from generate_noise import generate_noise_pattern
 from generateNoiseImage import generate_noise_image
+from tqdm import tqdm
 
 
 def simulate_noise_intensities(nrep=1000, img_size=512):

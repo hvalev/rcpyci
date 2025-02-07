@@ -1,15 +1,17 @@
-import numpy as np
 import math
 import sys
+
+import numpy as np
+
 # Add python library path so we can import python functions 
 # without a package for the reference implementation of rcicr
 sys.path.append("/tests/pyrcicr_ref/pyrcicr_ref/")
 
 import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
-from generate_noise import generate_sinusoid, generate_gabor, generate_noise_pattern, generate_scales
+from generate_noise import generate_gabor, generate_noise_pattern, generate_scales, generate_sinusoid
 from generateNoiseImage import generate_noise_image
 from generateStimuli2IFC import generate_stimuli_2IFC
+from rpy2.robjects.packages import importr
 
 # Load the R package
 package_name = "rcicr"
@@ -95,9 +97,10 @@ assert result_dict['noise_type'] == result_noise_pattern_python_gabor['noise_typ
 # Test generateNoiseImage function using a static params file and the previous identical sinusoid noise
 # This effectively sideloads R's implementation equivalent of runif np.random.uniform array 
 # to test the following functions
-params = np.load('/tests/params.npy')
+params = np.load('/data/params.npy')
 import numpy as np
 from rpy2.robjects import numpy2ri
+
 numpy2ri.activate() # global conversion will be deprecated for local ones
 # # Convert NumPy array to R np2rpy object
 r_np2rpy_object = numpy2ri.numpy2rpy(params)
@@ -116,8 +119,9 @@ print(f"Generated allclose noise images using sinusoid noise with max deviation 
 
 # Test generateStimuli2IFC function
 import numpy as np
-from rpy2.robjects import numpy2ri
 import rpy2.robjects as ro
+from rpy2.robjects import numpy2ri
+
 numpy2ri.activate() # global conversion will be deprecated for local ones
 n_trials = 5
 nscales = 5

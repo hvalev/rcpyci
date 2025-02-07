@@ -1,7 +1,3 @@
-import numpy as np
-from scipy.stats import norm, ttest_1samp
-from skimage.filters import gaussian
-from skimage.io import imsave
 
 
 def generateCI2IFC(stimuli, responses, baseimage, rdata, save_as_png=True, filename='', targetpath='./cis', antiCI=False, scaling='independent', constant=0.1):

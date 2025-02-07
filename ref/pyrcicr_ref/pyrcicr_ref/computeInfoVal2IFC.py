@@ -16,7 +16,7 @@ def computeInfoVal2IFC(target_ci, rdata, iter=10000, force_gen_ref_dist=False):
     img_size = df['img_size'].values[0]
     n_trials = df['n_trials'].values[0]
 
-    if not force_gen_ref_dist and not 'reference_norms' in globals():
+    if not force_gen_ref_dist and 'reference_norms' not in globals():
         # Pre-computed reference distribution table
         ref_lookup = pd.DataFrame({
             'ref_seed': [1],

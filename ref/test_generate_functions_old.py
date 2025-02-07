@@ -1,17 +1,20 @@
 import sys
+
 sys.path.append("/tests/pyrcicr_ref/pyrcicr_ref")
 #import os
 #os.environ['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']+':/usr/local/lib/R/lib:/usr/local/lib/R/modules'
 #os.environ['R_HOME'] = '/usr/local/lib/R'
-import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
-import numpy as np
 import math
-from generate_noise import generate_sinusoid, generate_gabor, generate_noise_pattern, generate_scales
+
+import numpy as np
+import rpy2.robjects as robjects
+from generate_noise import generate_gabor, generate_noise_pattern, generate_scales, generate_sinusoid
 from generateNoiseImage import generate_noise_image
 
 #from generateStimuli2IFC import generateStimuli2IFC
 from generateStimuli2IFC import generate_stimuli_2IFC
+from rpy2.robjects.packages import importr
+
 #from generate_noise import generate_gabor, generate_sinusoid, generate_noise_pattern
 # import os
 # os.environ['R_HOME'] = '/usr/local/lib/R'
@@ -115,6 +118,7 @@ params = np.load('/pyrcicr/tests/params.npy')
 # https://rpy2.github.io/doc/latest/html/numpy.html
 import numpy as np
 from rpy2.robjects import numpy2ri
+
 numpy2ri.activate() # global conversion will be deprecated for local ones
 # Convert NumPy array to R np2rpy object
 r_np2rpy_object = numpy2ri.numpy2rpy(params)
@@ -180,6 +184,7 @@ ro.r['print'](base_face_files)
 #as a sequence the R function has been modified slightly to accept an external array as parameters when provided
 import numpy as np
 from rpy2.robjects import numpy2ri
+
 numpy2ri.activate() # global conversion will be deprecated for local ones
 # Convert NumPy array to R np2rpy object
 # init stuff for generating the params stuff

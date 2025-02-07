@@ -1,4 +1,6 @@
 from generateNoiseImage import generate_noise_image
+
+
 # TODO: here I must make sure that the input variables are already numpy arrays...
 def generate_ci_noise(stimuli, responses, p):
     # normalize responses, so we can multiply correctly

@@ -1,4 +1,5 @@
 import math
+
 import numpy as np
 
 # def generate_sinusoid(size, frequency, orientation, phase, contrast):
