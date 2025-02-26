@@ -62,13 +62,41 @@ def compute_zscore_stimulus_params(img_size, ci, stimuli_params, responses, patc
     return {'zscore_image': zscore_image, 't_stat': t_stat, 'p_values': p_values}
 
 
-### Compute infoval on a ci as a postprocessing pipeline
+@cache_as_numpy
+def compute_zscore_stimulus_params_memory_efficient(img_size, stimuli_params, responses, patches, patch_idx, cache_path=None):
+    """
+    Computes the Z-score image for stimulus parameters using running mean and variance.
+    More memory efficient, but may incurr accumulating errors for medium datasets.
+    """
+    from .core import __generate_individual_noise_stimulus
+    n_observations = len(responses)
+    
+    # Running mean and variance computation
+    mean_accum = np.zeros((img_size, img_size))
+    M2_accum = np.zeros((img_size, img_size))  # Sum of squared differences from the mean
+    
+    for obs in range(n_observations):
+        noise_image = __generate_individual_noise_stimulus(stimuli_params[obs] * responses[obs], patches, patch_idx)
+        # Welford's algorithm for running mean and variance
+        delta = noise_image - mean_accum
+        mean_accum += delta / (obs + 1)
+        M2_accum += delta * (noise_image - mean_accum)  # Second pass for variance
+    
+    # Compute standard deviation from accumulated variance
+    variance = M2_accum / (n_observations - 1)
+    std_dev = np.sqrt(variance)
+    
+    # Compute t-statistics
+    t_stat = mean_accum / (std_dev / np.sqrt(n_observations))
+    
+    # Compute p-values (two-tailed test)
+    p_values = 2 * (1 - t.cdf(np.abs(t_stat), df=n_observations - 1))
+    
+    # Compute Z-score image (convert t-stat to Z-score)
+    zscore_image = norm.ppf(1 - p_values / 2) * np.sign(t_stat)
+    
+    return {'zscore_image': zscore_image, 't_stat': t_stat, 'p_values': p_values}
 
-compute_infoval_2ifc_pipeline_kwargs = {
-    'path_to_reference_norms': None,
-    'use_cache': True,
-    'save_folder': 'infoval'
-}
 
 @cache_as_numpy
 def compute_infoval_2ifc_pipeline(ci, path_to_reference_norms, cache_path=None):
