@@ -14,7 +14,11 @@ combine_ci_kwargs = {'scaling': 'independent', 'scaling_constant': 0.1, 'mask': 
 
 compute_zscore_ci_kwargs = {'sigma': 5, 'use_cache': True, 'save_folder': 'zscore_ci'}
 compute_ci_pixel_test_kwargs = {'FWHM': 4, 'p': 0.05, 'threshold': 2.7, 'save_folder': 'ci_rft_pixel_test'}
+compute_ci_clusters_test_kwargs = {'use_cache': True, 'FWHM': 4, 'threshold': 2.7, 'p': 0.05, 'save_folder': 'ci_rft_cluster_test'}
+
 compute_zscore_stim_params_kwargs = {'use_cache': True, 'save_folder': 'zscore_stim_params'}
+compute_stim_params_clusters_test_kwargs = {'use_cache': True, 'FWHM': 4, 'threshold': 2.7, 'p': 0.05, 'save_folder': 'stim_params_rft_cluster_test'}
+compute_stim_params_clusters_test_nilearn_kwargs = {'use_cache': True, 'FWHM': 4, 'threshold': 2.7, 'p': 0.05, 'save_folder': 'stim_params_rft_cluster_test_nilearn'}
 
 @cache_as_numpy
 def compute_ci(base_image, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, gabor_sigma, noise_type, seed, cache_path=None):
@@ -161,6 +165,54 @@ def compute_rft_pixel_test(zscore_image, FWHM, p=0.05, cache_path=None):
         'significant_pixels_positive': significant_positive_pixels,
         'significant_pixels_negative': significant_negative_pixels
     }
+
+
+@cache_as_numpy
+def compute_rft_clusters_test(zscore_image, FWHM, threshold, p=0.05, cache_path=None):
+    """
+    Performs the cluster test based on RFT to find significant clusters in a Z-score image.
+    
+    Args:
+        zscore_image (numpy.ndarray): Z-scored classification image.
+        FWHM (float): Full width at half maximum of the Gaussian filter.
+        threshold (float, optional): Cluster-forming threshold (e.g., 2.7).
+        p (float, optional): Desired p-value threshold (e.g., 0.05).
+    
+    Returns:
+        dict: Contains threshold, significant clusters, and positive/negative clusters.
+    """
+    # Compute Resels and EC densities (for 2D)
+    volume = zscore_image.size  # Total number of pixels
+    resels = volume / (FWHM ** 2)
+    
+    # # EC densities for 2D Gaussian field (from Worsley et al. 1996)
+    def EC2(t):
+        # For 2D field with proper scale factors
+        return (4 * np.log(2) / (FWHM**2)) * np.exp(-t**2 / 2) / (2 * np.pi)
+    
+    def p_cluster(k, t):
+        # More accurate approximation for cluster-extent p-values including FWHM
+        expected_clusters = resels * EC2(t)
+        return np.exp(-expected_clusters) * np.exp(-k * (t**2 - 1) / (2 * (FWHM**2)))
+    
+    max_k = zscore_image.size
+
+    # Find minimum cluster size using binary search
+    low_k, high_k = 1, max_k
+    while low_k < high_k:
+        mid_k = (low_k + high_k) // 2
+        if p_cluster(mid_k, threshold) < p:
+            high_k = mid_k
+        else:
+            low_k = mid_k + 1
+    min_cluster_size = low_k
+
+    significant_clusters_positive = find_clusters(zscore_image > threshold, min_cluster_size)
+    significant_clusters_negative = find_clusters(zscore_image < -threshold, min_cluster_size)
+
+    return {'threshold': threshold, 
+            'significant_clusters_positive': significant_clusters_positive, 
+            'significant_clusters_negative': significant_clusters_negative}
 
 
     (compute_ci, compute_anti_ci_kwargs),
