@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter
-from scipy.stats import norm, ttest_1samp, t
+from scipy.stats import norm, t, ttest_1samp
 
 from .im_ops import apply_constant_scaling, apply_independent_scaling, apply_mask, combine, find_clusters
 from .utils import cache_as_image, cache_as_numpy
