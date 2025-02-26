@@ -148,34 +148,39 @@ def pop_consumed_variables(consumed_vars, local_vars):
     """pop out consumed variables from the local variables dictionary."""
     return {k: v for k, v in local_vars.items() if k not in consumed_vars}
 
-def extract_sorted_responses(data: pd.DataFrame, condition=None, participant=None, n_trials=770, average=False):
+def extract_sorted_responses_participant(data: pd.DataFrame, participant: int, n_trials=770):
     """
-    Extracts and sorts responses from the data based on condition or participant.
+    Extracts and sorts responses from the data based on a participant.
     
     Args:
         data (pd.DataFrame): The dataset containing responses.
-        condition (int, optional): The ID of the condition to filter by.
-        participant (int, optional): The ID of the participant to filter by.
+        participant_id (int): The ID of the participant to filter by.
         n_trials (int): The number of trials.
-        average (bool): Whether to average responses across participants.
 
     Returns:
         np.ndarray: The sorted responses.
     """
-    if condition is not None:
-        filtered_data = data[data['condition'] == condition]
-    elif participant is not None:
-        filtered_data = data[data['participant_id'] == participant]
-    else:
-        raise ValueError("Either condition or participant must be provided.")
-    
+    filtered_data = data[data['participant_id'] == participant]
     sorted_data = filtered_data.sort_values(by='stimulus_id')
-    
-    if average:
-        sorted_data = sorted_data.groupby('stimulus_id')['responses'].mean().reset_index()
-
     sorted_responses = sorted_data['responses'].to_numpy().reshape(n_trials, 1)
-    return sorted_responses
+    return filtered_data, sorted_responses
+
+def extract_sorted_responses_condition(data: pd.DataFrame, condition: int, n_trials=770):
+    """
+    Extracts and sorts responses from the data based on a condition.
+    
+    Args:
+        data (pd.DataFrame): The dataset containing responses.
+        condition_id (int): The ID of the condition to filter by.
+
+    Returns:
+        np.ndarray: The sorted responses.
+    """
+    filtered_data = data[data['condition'] == condition]
+    # Sort by the stimulus ID and calculate mean response for each stimulus
+    grouped_data = filtered_data.groupby('stimulus_id')['responses'].mean().reset_index()
+    sorted_responses = (grouped_data['responses']).to_numpy().reshape(n_trials, 1)
+    return filtered_data, sorted_responses
 
 def create_test_data(n_participants:int=100, n_trials:int=770):
     # for sample data reproducibility

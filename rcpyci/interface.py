@@ -16,7 +16,7 @@ from tqdm import tqdm
 from .core import generate_stimuli_2ifc, process_pipelines
 from .im_ops import read_image, save_image
 from .pipelines import full_pipeline
-from .utils import extract_sorted_responses, pop_consumed_variables
+from .utils import extract_sorted_responses_condition, extract_sorted_responses_participant, pop_consumed_variables
 
 logging.basicConfig(level=logging.INFO)
 
@@ -63,25 +63,12 @@ def process_condition(condition,
     """
     kwargs = pop_consumed_variables(['condition', 'data', 'experiment_path', 'label'], locals())
 
-    sorted_responses = extract_sorted_responses(data, condition=condition, n_trials=n_trials, average=True)
+    filtered_data, sorted_responses = extract_sorted_responses_condition(data, condition=condition, n_trials=n_trials)
     kwargs['responses'] = sorted_responses
     
     logging.info(f"Processing condition {condition}")
     pipeline_id = f"{label}_{condition}"
-    results = process_pipelines(base_image = base_image,
-                                responses = sorted_responses,
-                                pipelines = pipelines,
-                                pipeline_id = pipeline_id,
-                                experiment_path = experiment_path,
-                                stimuli_params = stimuli_params,
-                                patches = patches,
-                                patch_idx = patch_idx,
-                                n_trials = n_trials,
-                                n_scales = n_scales,
-                                gabor_sigma = gabor_sigma,
-                                noise_type = noise_type,
-                                seed = seed)
-    return results
+    filtered_data.to_csv(f"{os.path.join(experiment_path,pipeline_id)}_data.csv")
 
 def process_conditions(conditions, 
                        data: pd.DataFrame,
@@ -188,17 +175,24 @@ def process_participant(participant,
         gabor_sigma (int, default=25): The standard deviation of the Gabor filter.
         noise_type (str, default='sinusoid'): The type of noise to be added to the images.
         seed (int, default=1): A random seed for reproducibility.
+        return_results: set to true as if this method is called directly, it is with the intent to 
+            return results. Otherwise it's for precomputing and caching
     
     Returns:
         results: A dictionary containing the processed participant data and pipeline results.
     """
     kwargs = pop_consumed_variables(['participant', 'data', 'experiment_path', 'label'], locals())
     
-    sorted_responses = extract_sorted_responses(data, participant=participant, n_trials=n_trials, average=False)
+    filtered_data, sorted_responses = extract_sorted_responses_participant(data, participant=participant, n_trials=n_trials)
+
     kwargs['responses'] = sorted_responses
 
     logging.info(f"Processing participant {participant}")
     pipeline_id = f"{label}_{participant}"
+    
+    # Dump participant data for easier lookup later
+    filtered_data.to_csv(f"{os.path.join(experiment_path,pipeline_id)}_data.csv")
+
     results = process_pipelines(base_image = base_image,
                                 responses = sorted_responses,
                                 pipelines = pipelines,
