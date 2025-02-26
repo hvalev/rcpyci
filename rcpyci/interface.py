@@ -20,7 +20,6 @@ from .utils import extract_sorted_responses_condition, extract_sorted_responses_
 
 logging.basicConfig(level=logging.INFO)
 
-
 def process_condition(condition,
                       data: pd.DataFrame,
                       base_image: np.ndarray,
@@ -34,7 +33,8 @@ def process_condition(condition,
                       noise_type: str = 'sinusoid',
                       seed: int = 1,
                       experiment_path: str = './experiment',
-                      label:str='rcpyci'):
+                      label:str='rcpyci',
+                      return_results: bool = True):
     """
     This function processes a single condition from the given data. 
     It calculates the average response for each stimulus_id across 
@@ -69,6 +69,21 @@ def process_condition(condition,
     logging.info(f"Processing condition {condition}")
     pipeline_id = f"{label}_{condition}"
     filtered_data.to_csv(f"{os.path.join(experiment_path,pipeline_id)}_data.csv")
+    result = process_pipelines(base_image = base_image,
+                        responses = sorted_responses,
+                        pipelines = pipelines,
+                        pipeline_id = pipeline_id,
+                        experiment_path = experiment_path,
+                        stimuli_params = stimuli_params,
+                        patches = patches,
+                        patch_idx = patch_idx,
+                        n_trials = n_trials,
+                        n_scales = n_scales,
+                        gabor_sigma = gabor_sigma,
+                        noise_type = noise_type,
+                        seed = seed)
+    if return_results:
+        return result
 
 def process_conditions(conditions, 
                        data: pd.DataFrame,
@@ -84,7 +99,8 @@ def process_conditions(conditions,
                        seed: int = 1,
                        experiment_path:str='./experiment',
                        label:str='rcpyci',
-                       n_jobs=10):
+                       n_jobs=10,
+                       return_results: bool = False):
     """
     Process conditions for a series of experiments.
 
@@ -129,13 +145,12 @@ def process_conditions(conditions,
     logging.info("Started calculating ci and zmaps for conditions. "
                     "Be mindful that with higher parallel jobs the progress bar becomes more inaccurate. "
                     "This may take a while... ")
-    result = Parallel(n_jobs=n_jobs)(delayed(process_condition)(
+    Parallel(n_jobs=n_jobs)(delayed(process_condition)(
         condition=condition,
         **kwargs
     ) for condition in tqdm(conditions))
 
     logging.info("Finished processing ci and zmaps for conditions.")
-    return result
 
 def process_participant(participant,
                         data: pd.DataFrame,
@@ -150,7 +165,8 @@ def process_participant(participant,
                         noise_type: str = 'sinusoid',
                         seed: int = 1,
                         experiment_path:str='./experiment',
-                        label:str='rcpyci'):
+                        label:str='rcpyci',
+                        return_results: bool = True):
     """ 
     Process participant data and apply visual processing pipelines.
 
@@ -194,19 +210,20 @@ def process_participant(participant,
     filtered_data.to_csv(f"{os.path.join(experiment_path,pipeline_id)}_data.csv")
 
     results = process_pipelines(base_image = base_image,
-                                responses = sorted_responses,
-                                pipelines = pipelines,
-                                pipeline_id = pipeline_id,
-                                experiment_path = experiment_path,
-                                stimuli_params = stimuli_params,
-                                patches = patches,
-                                patch_idx = patch_idx,
-                                n_trials = n_trials,
-                                n_scales = n_scales,
-                                gabor_sigma = gabor_sigma,
-                                noise_type = noise_type,
-                                seed = seed)
-    return results
+                        responses = sorted_responses,
+                        pipelines = pipelines,
+                        pipeline_id = pipeline_id,
+                        experiment_path = experiment_path,
+                        stimuli_params = stimuli_params,
+                        patches = patches,
+                        patch_idx = patch_idx,
+                        n_trials = n_trials,
+                        n_scales = n_scales,
+                        gabor_sigma = gabor_sigma,
+                        noise_type = noise_type,
+                        seed = seed)
+    if return_results:
+        return results
 
 def process_participants(participants: list,
                          data: pd.DataFrame,
@@ -222,7 +239,8 @@ def process_participants(participants: list,
                          seed: int = 1,
                          experiment_path:str='./experiment',
                          label: str='rcpyci',
-                         n_jobs=10):
+                         n_jobs=10,
+                         return_results: bool = False):
     """
     This function processes individual participants, calculating CI and zmaps for each.
 
@@ -249,9 +267,8 @@ def process_participants(participants: list,
     logging.info("Started calculating ci and zmaps for individual participants.  " +
                   "Be mindful that with higher parallel jobs the progress bar becomes more inaccurate.  " +
                     "This may take a while... ")
-    result = Parallel(n_jobs=n_jobs)(delayed(process_participant)(participant=participant, **kwargs) for participant in tqdm(participants))
+    Parallel(n_jobs=n_jobs)(delayed(process_participant)(participant=participant, **kwargs) for participant in tqdm(participants))
     logging.info("Finished processing individual ci and zmaps.")
-    return result
 
 def analyze_data(data: pd.DataFrame,
                  base_face_path: str,
@@ -266,7 +283,8 @@ def analyze_data(data: pd.DataFrame,
                  seed: int = 1,
                  experiment_path:str='./experiment',
                  label:str='rcpyci',
-                 n_jobs=10):
+                 n_jobs=10,
+                 return_results: bool = False):
     """ 
     Analyzes data and generates stimuli parameters and patches for all participants and conditions.
 
@@ -320,14 +338,12 @@ def analyze_data(data: pd.DataFrame,
     
     participants = list(data['participant_id'].unique())
     kwargs['participants'] = participants
-    participants_results = process_participants(**kwargs)
+    process_participants(**kwargs)
     kwargs.pop('participants', None)
 
     conditions = list(data['condition'].unique())
     kwargs['conditions'] = conditions
-    conditions_results = process_conditions(**kwargs)
-    
-    return participants_results, conditions_results
+    process_conditions(**kwargs)
 
 
 def setup_experiment(base_face_path: str,
