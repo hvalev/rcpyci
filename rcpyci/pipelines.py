@@ -215,9 +215,43 @@ def compute_rft_clusters_test(zscore_image, FWHM, threshold, p=0.05, cache_path=
             'significant_clusters_negative': significant_clusters_negative}
 
 
+
+pipeline_compute_ci_antici = [
+    (compute_ci, compute_anti_ci_kwargs),
+    (combine_ci, combine_anti_ci_kwargs),
+    (compute_ci, compute_ci_kwargs),
+    (combine_ci, combine_ci_kwargs),
+]
+
+pipeline_zmap_pixelwise_ci = [
     (compute_ci, compute_anti_ci_kwargs),
     (combine_ci, combine_anti_ci_kwargs),
     (compute_ci, compute_ci_kwargs),
     (combine_ci, combine_ci_kwargs),
     (compute_zscore_ci, compute_zscore_ci_kwargs),
+    (compute_rft_pixel_test, compute_ci_pixel_test_kwargs)
+]
+
+pipeline_zmap_on_stim_param = [
+    (compute_ci, compute_anti_ci_kwargs),
+    (combine_ci, combine_anti_ci_kwargs),
+    (compute_ci, compute_ci_kwargs),
+    (combine_ci, combine_ci_kwargs),
+    (compute_zscore_stimulus_params, compute_zscore_stim_params_kwargs),
+    (compute_rft_clusters_test, compute_stim_params_clusters_test_kwargs)
+]
+
+full_pipeline = [
+    # basic processing of computing the ci, antici
+    (compute_ci, compute_anti_ci_kwargs),
+    (combine_ci, combine_anti_ci_kwargs),
+    (compute_ci, compute_ci_kwargs),
+    (combine_ci, combine_ci_kwargs),
+    # here we compute the ci zmap on the image (with gaussian blurring) as well as identify significant pixels or clusters on the ci image
+    (compute_zscore_ci, compute_zscore_ci_kwargs),
+    (compute_rft_pixel_test, compute_ci_pixel_test_kwargs),
+    (compute_rft_clusters_test, compute_ci_clusters_test_kwargs),
+    # here we compute the zmap on the parameter space (stimulus) and compute clusters based off of that zmap
+    (compute_zscore_stimulus_params_memory_efficient, compute_zscore_stim_params_kwargs),
+    (compute_rft_clusters_test, compute_stim_params_clusters_test_kwargs)
 ]

@@ -131,3 +131,21 @@ def apply_independent_scaling(ci: np.ndarray):
 
 def combine(im1: np.ndarray, im2: np.ndarray):
     return (im1 + im2) / 2
+
+def find_clusters(mask, min_size:int=1):
+    """
+    Identifies contiguous clusters in a binary mask.
+    
+    Args:
+        mask (numpy.ndarray): Binary mask where True indicates regions above threshold.
+        min_size (int, optional): Minimum size of clusters to retain.
+    
+    Returns:
+        numpy.ndarray: Boolean mask of significant clusters.
+    """
+    import scipy.ndimage as ndi
+    labeled, _ = ndi.label(mask)
+    sizes = np.bincount(labeled.ravel())[1:]
+    mask_sizes = np.where(sizes >= min_size)[0] + 1
+    significant_clusters = np.isin(labeled, mask_sizes)
+    return significant_clusters
