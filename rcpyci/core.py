@@ -186,9 +186,8 @@ def __generate_coordinate_meshgrid_for_patch(cycles, patch_size):
     X (numpy array): The x-coordinates of the meshgrid.
     Y (numpy array): The y-coordinates of the meshgrid.
     """
-    x = np.linspace(0, cycles, patch_size)
-    y = np.linspace(0, cycles, patch_size)
-    X, Y = np.meshgrid(x, y)
+    x, y = np.ogrid[0:cycles:patch_size*1j, 0:cycles:patch_size*1j]
+    X, Y = np.broadcast_arrays(x.T, y.T)
     return X, Y
 
 def __generate_sinusoid(patch_size: int, cycles: float, angle: float, phase: float, contrast: float):
