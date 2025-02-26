@@ -13,6 +13,7 @@ compute_ci_kwargs = {'anti_ci': False, 'use_cache': True, 'save_folder': 'ci_raw
 combine_ci_kwargs = {'scaling': 'independent', 'scaling_constant': 0.1, 'mask': None, 'use_cache': True, 'save_folder': 'ci'}
 
 compute_zscore_ci_kwargs = {'sigma': 5, 'use_cache': True, 'save_folder': 'zscore_ci'}
+compute_ci_pixel_test_kwargs = {'FWHM': 4, 'p': 0.05, 'threshold': 2.7, 'save_folder': 'ci_rft_pixel_test'}
 compute_zscore_stim_params_kwargs = {'use_cache': True, 'save_folder': 'zscore_stim_params'}
 
 @cache_as_numpy
@@ -99,24 +100,69 @@ def compute_zscore_stimulus_params_memory_efficient(img_size, stimuli_params, re
 
 
 @cache_as_numpy
-def compute_infoval_2ifc_pipeline(ci, path_to_reference_norms, cache_path=None):
-    ref_norms = np.load(path_to_reference_norms)
-    from .infoval import compute_info_val_2ifc
-    info_val, cinorm, ref_median, ref_mad, ref_iter = compute_info_val_2ifc(target_ci=ci,
-                                                                            reference_norms=ref_norms)
+def compute_rft_pixel_test(zscore_image, FWHM, p=0.05, cache_path=None):
+    """
+    Performs the pixel-level test based on Random Field Theory (RFT) to identify significant
+    pixels in the Z-score image, while separating positive and negative significant pixels.
     
+    Args:
+        zscore_image (numpy.ndarray): Z-scored classification image.
+        FWHM (float): Full width at half maximum of the Gaussian filter.
+        p (float): Desired p-value threshold (default 0.05).
+    
+    Returns:
+        dict: Contains the threshold used, and boolean arrays indicating significant pixels for both
+              positive and negative Z-scores.
+    """
+    # Calculate resels (resolution elements) based on image volume and FWHM
+    volume = zscore_image.size
+    #resels = volume / (FWHM ** 2)
+    
+    def EC0(t):
+        return norm.sf(t)
+
+    def EC1(t):
+        # For 2D field with proper scale factors
+        return (4 * np.log(2) / FWHM) * np.exp(-t**2 / 2) / np.sqrt(2 * np.pi)
+
+    def EC2(t):
+        # For 2D field with proper scale factors
+        return (4 * np.log(2) / (FWHM**2)) * np.exp(-t**2 / 2) / (2 * np.pi)
+    
+    def p_max(t):
+        # For a 2D image with proper weightings
+        num_resels_2D = (volume / (FWHM ** 2))
+        num_resels_1D = (4 * np.sqrt(volume)) / FWHM
+        num_resels_0D = 1  # Typically 1 for a single connected field
+        
+        return num_resels_0D * EC0(t) + num_resels_1D * EC1(t) + num_resels_2D * EC2(t)
+    
+    # Find the threshold using binary search
+    low, high = 0.0, 10.0
+    tolerance = 1e-6
+    for _ in range(512):
+        mid = (low + high) / 2
+        p_val = p_max(mid)
+        if p_val < p:
+            high = mid
+        else:
+            low = mid
+        if high - low < tolerance:
+            threshold = high
+            break
+    
+    # Identify significant pixels for both positive and negative Z-scores
+    significant_positive_pixels = zscore_image > threshold
+    significant_negative_pixels = zscore_image < -threshold
+
+    # Return the threshold and significant pixels for both positive and negative Z-scores
     return {
-        "info_val": info_val,
-        "cinorm": cinorm,
-        "ref_median": ref_median,
-        "ref_mad": ref_mad,
-        "ref_iter": ref_iter
+        'threshold': threshold,
+        'significant_pixels_positive': significant_positive_pixels,
+        'significant_pixels_negative': significant_negative_pixels
     }
 
 
-
-
-full_pipeline = [
     (compute_ci, compute_anti_ci_kwargs),
     (combine_ci, combine_anti_ci_kwargs),
     (compute_ci, compute_ci_kwargs),
