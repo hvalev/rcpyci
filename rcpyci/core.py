@@ -12,7 +12,7 @@ import numpy as np
 from tqdm import tqdm
 
 from .im_ops import combine, get_image_size
-from .utils import get_extension_from_decorator
+from .utils import get_extension_from_decorator, hash_inputs
 
 
 def compute_ci(base_image: np.ndarray,
@@ -107,29 +107,40 @@ def process_pipelines(base_image: np.ndarray,
         `patch_idx` are provided, they will be used in the computation; otherwise,
         default values will be used.
     """
-    # Get all local variables, and pipe the ones needed for the postprocessing pipelines
+    # We are also adding img_size to local kwargs, so that we can avoid recomputing it in subsequent steps
+    # This will ease computing hashes for input params which calculates on *ALL* input parameters
     img_size = get_image_size(base_image)
+
     # if stimuli_params is passed, no need to recompute it
     if stimuli_params is None:
         stimuli_params = __generate_stimuli_params(n_trials, n_scales, seed=seed)
     if patches is None or patch_idx is None:
         patches, patch_idx = __generate_noise_pattern(img_size=img_size, n_scales=n_scales, noise_type=noise_type, gabor_sigma=gabor_sigma)
-    
+
     kwargs = locals()
-    
     results = []
+
     for (pipeline, pipeline_kwargs) in pipelines:
         kwargs.update(pipeline_kwargs)
-        kwargs['cache_path'] = None
-        if 'use_cache' in kwargs and kwargs['use_cache']:
-            ext = get_extension_from_decorator(pipeline)
-            if ext is not None:
-                kwargs['cache_path'] = os.path.join(kwargs['experiment_path'], kwargs['save_folder'], f"{kwargs['pipeline_id']}.{ext}")
+
+        # Compute hash of relevant inputs
         sig = inspect.signature(pipeline)
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        input_hash = hash_inputs(filtered_kwargs)
+
+        # Determine cache filename
+        if 'use_cache' in kwargs and kwargs['use_cache']:
+            ext = get_extension_from_decorator(pipeline)
+            if ext:
+                cache_filename = f"{kwargs['pipeline_id']}_{input_hash}.{ext}"
+                filtered_kwargs['cache_path'] = os.path.join(kwargs['experiment_path'], kwargs['save_folder'], cache_filename)
+
         result = pipeline(**filtered_kwargs)
-        kwargs.update(result)    
+        # Update kwargs with pipeline step result
+        kwargs.update(result)
+        # Append pipeline step results to result list
         results.append(result)
+
     return results
 
 def __generate_ci_noise(stimuli, responses, patches, patch_idx):

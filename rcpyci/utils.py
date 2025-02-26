@@ -15,6 +15,38 @@ from .im_ops import save_image
 
 logging.basicConfig(level=logging.INFO)
 
+import hashlib
+import json
+import numpy as np
+
+import hashlib
+import json
+import time
+
+def convert_value(value):
+    """Ensure all values are JSON-serializable and consistent."""
+    if isinstance(value, np.ndarray):
+        return value.tolist()  # Convert arrays to lists
+    elif isinstance(value, (np.int64, np.int32, np.float32, np.float64)):  
+        return value.item()  # Convert NumPy scalars to Python native types
+    return value  # Leave other types unchanged
+
+def hash_inputs(kwargs):
+    """Generate a hash for the given keyword arguments, excluding large arrays."""
+    # List of variable names to exclude from the hash computation
+    exclude_keys = {'base_image', 'stimuli_params', 'patches', 'patch_idx'}
+    #exclude_keys = {'base_image', 'stimuli_params', 'patches', 'patch_idx', 'cache_path', 'use_cache', 'save_folder'}#
+    
+    hash_obj = hashlib.sha256()
+    # Filter out the large arrays from kwargs
+    filtered_kwargs = {key: convert_value(value) for key, value in sorted(kwargs.items()) if key not in exclude_keys}
+    logging.debug(f"Hashing the following keys: {list(filtered_kwargs.keys())}")
+    # Hash the filtered kwargs
+    hash_obj.update(json.dumps(filtered_kwargs, sort_keys=True).encode())  # Hash JSON-serializable inputs
+    hash_value = hash_obj.hexdigest()[:12]  # Use first 12 characters for brevity
+    return hash_value
+
+
 def cache_as_numpy(func):
     """
     Wraps a given function to store its results in a NumPy .npz file, 
