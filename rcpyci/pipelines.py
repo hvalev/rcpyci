@@ -18,7 +18,6 @@ compute_ci_clusters_test_kwargs = {'use_cache': True, 'FWHM': 4, 'threshold': 2.
 
 compute_zscore_stim_params_kwargs = {'use_cache': True, 'save_folder': 'zscore_stim_params'}
 compute_stim_params_clusters_test_kwargs = {'use_cache': True, 'FWHM': 4, 'threshold': 2.7, 'p': 0.05, 'save_folder': 'stim_params_rft_cluster_test'}
-compute_stim_params_clusters_test_nilearn_kwargs = {'use_cache': True, 'FWHM': 4, 'threshold': 2.7, 'p': 0.05, 'save_folder': 'stim_params_rft_cluster_test_nilearn'}
 
 @cache_as_numpy
 def compute_ci(base_image, stimuli_params, responses, patches, patch_idx, anti_ci, n_trials, n_scales, gabor_sigma, noise_type, seed, cache_path=None):
