@@ -2,6 +2,8 @@
 File Name: core.py
 Description: object to object part of the library, for any interaction and interfacing with files, check interface.py
 """
+import hashlib
+import json
 import logging
 import os
 import random
@@ -15,8 +17,6 @@ from .im_ops import save_image
 
 logging.basicConfig(level=logging.INFO)
 
-import hashlib
-import json
 
 
 def convert_value(value):
