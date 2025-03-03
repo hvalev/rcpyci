@@ -1,103 +1,52 @@
-[project]
-name = "rcpyci"
-version = "0.9.0"
-description = "Toolbox for reverse correlation classification images"
-readme = "README.md"
-requires-python = ">=3.9"
-license = {file = "LICENSE.txt"}
-keywords = ["reverse correlation", "classification images", "2IFC"]
-authors = [
-  {name = "Hristo Valev", email = "author@example.com" }
-]
-maintainers = [
-  {name = "Hristo Valev", email = "maintainer@example.com" }
-]
-# For a list of valid classifiers, see https://pypi.org/classifiers/
-classifiers = [
-  # How mature is this project? Common values are
-  #   3 - Alpha
-  #   4 - Beta
-  #   5 - Production/Stable
-  "Development Status :: 4 - Beta",
-  # Indicate who your project is intended for
-  "Intended Audience :: Researchers",
-  # "Topic :: Reverse Correlation Classification Images :: Toolkit",
-  # "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3 :: Only",
-]
-
-dependencies = [
-    "numpy",
-    "pandas",
-    "pillow",
-    "scipy"
-]
-
-# List additional groups of dependencies here (e.g. development
-# dependencies). Users will be able to install these using the "extras"
-# syntax, for example:
-#
-#   $ pip install sampleproject[dev]
-#
-# Optional dependencies the project provides. These are commonly 
-# referred to as "extras". For a more extensive definition see:
-# https://packaging.python.org/en/latest/specifications/dependency-specifiers/#extras
-[project.optional-dependencies]
-dev = ["check-manifest"]
-
-# List URLs that are relevant to your project
-#
-# This field corresponds to the "Project-URL" and "Home-Page" metadata fields:
-# https://packaging.python.org/specifications/core-metadata/#project-url-multiple-use
-# https://packaging.python.org/specifications/core-metadata/#home-page-optional
-#
-# Examples listed include a pattern for specifying where the package tracks
-# issues, where the source is hosted, where to say thanks to the package
-# maintainers, and where to support the project financially. The key is
-# what's used to render the link text on PyPI.
-[project.urls]
-"Homepage" = "https://github.com/pypa/sampleproject"
-"Bug Reports" = "https://github.com/pypa/sampleproject/issues"
-"Funding" = "https://donate.pypi.org"
-"Say Thanks!" = "http://saythanks.io/to/example"
-"Source" = "https://github.com/pypa/sampleproject/"
-
-# The following would provide a command line executable called `sample`
-# which executes the function `main` from this package when invoked.
-[project.scripts]
-sample = "sample:main"
-
 [tool.poetry]
 name = "rcpyci"
-version = "0.9.0"
+version = "0.10.0"
 description = "Toolkit for reverse correlation classificiation images"
-authors = ["Hristo Valev <blank@blank.blank>"]
+authors = ["hvalev"]
+license = "MIT"
+maintainers = ["hvalev"]
+readme = "README.md"
+homepage = "https://github.com/hvalev/rcpyci"
+repository = "https://github.com/hvalev/rcpyci"
+documentation = "https://github.com/hvalev/rcpyci"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+packages = [{ include = "rcpyci" }]
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.10"
 pandas = "^2.2.2"
 pillow = "^10.3.0"
 numpy = "^1.24.4"
 scipy =  "^1.13.1"
-tqdm = "^4.66.4"
+streamlit = "^1.42.0"
 joblib = "^1.4.2"
+tqdm = "^4.67.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.6"
 pytest = "^8.2.1"
 
+[tool.poetry.group.test.dependencies]
+
+[tool.poetry.extras]
+
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
 
 [tool.ruff]
-line-length = 120
+line-length = 160
 extend-include = ["*.ipynb"]
+exclude = ["ref/"]
 
 [tool.ruff.format]
 quote-style = "single"
