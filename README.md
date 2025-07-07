@@ -3,6 +3,7 @@
 [![Downloads](https://static.pepy.tech/badge/rcpyci)](https://pepy.tech/project/rcpyci)
 [![Downloads](https://static.pepy.tech/badge/rcpyci/month)](https://pepy.tech/project/rcpyci)
 [![Downloads](https://static.pepy.tech/badge/rcpyci/week)](https://pepy.tech/project/rcpyci)
+[![DOI](https://zenodo.org/badge/795065661.svg)](https://doi.org/10.5281/zenodo.15827936)
 
 rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images toolbox for generating classification images for 2AFC experiments and analyzing experiment results. rcpyci supports the following tasks:
 - generate stimulus images for 2AFC tasks
