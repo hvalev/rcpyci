@@ -1,4 +1,9 @@
 # rcpyci 🌶️
+[![build](https://github.com/hvalev/rcpyci/actions/workflows/build.yml/badge.svg)](https://github.com/hvalev/rcpyci/actions/workflows/build.yml)
+[![Downloads](https://static.pepy.tech/badge/rcpyci)](https://pepy.tech/project/rcpyci)
+[![Downloads](https://static.pepy.tech/badge/rcpyci/month)](https://pepy.tech/project/rcpyci)
+[![Downloads](https://static.pepy.tech/badge/rcpyci/week)](https://pepy.tech/project/rcpyci)
+
 rcpyci (/ɑr ˈspaɪsi/) is a reverse correlation classification images toolbox for generating classification images for 2AFC experiments and analyzing experiment results. rcpyci supports the following tasks:
 - generate stimulus images for 2AFC tasks
 - create classification images from 2AFC tasks split by participant or condition
