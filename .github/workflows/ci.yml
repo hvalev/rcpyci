@@ -1,0 +1,49 @@
+name: ci
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+    branches:
+      - '**'
+
+jobs:
+  test:
+    name: Test with different Python versions
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Ensure pip is available
+        run: |
+          python -m ensurepip --upgrade
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Build the package
+        run: |
+          uv build
+
+      - name: Create virtual environment
+        run: |
+          uv venv
+          source .venv/bin/activate
+
+      - name: Install test dependencies
+        run: |
+          source .venv/bin/activate
+          uv pip install -e ".[test]"
+
+      - name: Test with ruff
+        run: |
+          source .venv/bin/activate
+          ruff check .
