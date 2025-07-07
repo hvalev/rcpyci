@@ -397,7 +397,7 @@ def setup_experiment(base_face_path: str,
     logging.info("Creating folders and saving data to disk")
     os.makedirs(os.path.join(experiment_path), exist_ok=True)
     timestamp = datetime.now().strftime("%b_%d_%Y_%H_%M")
-    for trial, (stimulus, stimulus_inverted) in tqdm(enumerate(zip(stimuli_ori, stimuli_inv)), desc="Processing", total=len(stimuli_ori)):
+    for trial, (stimulus, stimulus_inverted) in tqdm(enumerate(zip(stimuli_ori, stimuli_inv, strict=False)), desc="Processing", total=len(stimuli_ori)):
         filename_ori = f"stimulus_{label}_seed_{seed}_trial_{trial:0{len(str(n_trials))}d}_ori.png"
         save_image(stimulus, os.path.join(experiment_path,"stimuli",filename_ori))
         filename_inv = f"stimulus_{label}_seed_{seed}_trial_{trial:0{len(str(n_trials))}d}_inv.png"

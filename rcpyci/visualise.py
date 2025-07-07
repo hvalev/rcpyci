@@ -79,7 +79,7 @@ def streamlit_app(data: pd.DataFrame,
 
     # Condition Selection (First Row)
     st.subheader("Select Condition")
-    condition_alias_map = dict(zip(data["condition_alias"], data["condition"]))
+    condition_alias_map = dict(zip(data["condition_alias"], data["condition"], strict=False))
     selected_condition_alias = st.selectbox("Condition", sorted(data["condition_alias"].unique()))
 
     # Get the actual condition corresponding to the selected alias
