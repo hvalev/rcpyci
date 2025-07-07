@@ -1,7 +1,3 @@
-"""
-File Name: core.py
-Description: object to object part of the library, for any interaction and interfacing with files, check interface.py
-"""
 import hashlib
 import json
 import logging
@@ -178,9 +174,8 @@ def extract_sorted_responses_condition(data: pd.DataFrame, condition: int, n_tri
     sorted_responses = (grouped_data['responses']).to_numpy().reshape(n_trials, 1)
     return filtered_data, sorted_responses
 
-def create_test_data(n_participants:int=100, n_trials:int=770):
+def create_test_data(n_participants: int = 100, n_trials: int = 770, seed: int = 42):
     # for sample data reproducibility
-    seed = 42
     np.random.seed(seed)
     random.seed(seed)
 
@@ -234,9 +229,6 @@ def verify_data(df: pd.DataFrame, verbose=False):
     responses = df['responses'].unique()
     if not (len(responses) == 2 and -1 in responses and 1 in responses):
         print('ERROR: Found a value in responses different from 1 or -1')
-
-# def compare_images(img1_path, img2_path):
-#     return all([x == y for x, y in zip(Image.open(img1_path).convert("L").getdata(), Image.open(img2_path).convert("L").getdata())])
 
 def compare_images(img1_path, img2_path):
     # Open images

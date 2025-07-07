@@ -119,7 +119,6 @@ def compute_rft_pixel_test(zscore_image, FWHM, p=0.05, cache_path=None):
     """
     # Calculate resels (resolution elements) based on image volume and FWHM
     volume = zscore_image.size
-    #resels = volume / (FWHM ** 2)
     
     def EC0(t):
         return norm.sf(t)
@@ -184,7 +183,7 @@ def compute_rft_clusters_test(zscore_image, FWHM, threshold, p=0.05, cache_path=
     volume = zscore_image.size  # Total number of pixels
     resels = volume / (FWHM ** 2)
     
-    # # EC densities for 2D Gaussian field (from Worsley et al. 1996)
+    # EC densities for 2D Gaussian field (from Worsley et al. 1996)
     def EC2(t):
         # For 2D field with proper scale factors
         return (4 * np.log(2) / (FWHM**2)) * np.exp(-t**2 / 2) / (2 * np.pi)
