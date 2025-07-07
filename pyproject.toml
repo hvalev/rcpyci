@@ -29,11 +29,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
-[[tool.uv.index]]
-name = "pypi"
-url = "https://pypi.org/simple/"
-publish-url = "https://upload.pypi.org/legacy/"
-explicit = true
 
 [project.urls]
 homepage = "https://github.com/hvalev/rcpyci"
