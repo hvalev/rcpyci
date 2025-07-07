@@ -12,7 +12,6 @@ dist/
 *.jpg
 .vscode/
 .cis/
-*egg-info*
 *.npy
 *.npz
 *.bak.py
