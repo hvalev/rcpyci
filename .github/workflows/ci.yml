@@ -22,28 +22,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Ensure pip is available
-        run: |
-          python -m ensurepip --upgrade
-
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - name: Check the lockfile matches pyproject.toml
+        run: uv lock --check
+
+      - name: Install dependencies from the lockfile
+        run: uv sync --frozen --extra test --extra visu
+
       - name: Build the package
-        run: |
-          uv build
+        run: uv build
 
-      - name: Create virtual environment
-        run: |
-          uv venv
-          source .venv/bin/activate
+      - name: Lint with ruff
+        run: uv run ruff check .
 
-      - name: Install test dependencies
-        run: |
-          source .venv/bin/activate
-          uv pip install -e ".[test]"
-
-      - name: Test with ruff
-        run: |
-          source .venv/bin/activate
-          ruff check .
+      - name: Run tests
+        run: uv run pytest
