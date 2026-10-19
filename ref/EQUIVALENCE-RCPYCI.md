@@ -45,3 +45,22 @@ convention, not the arithmetic.
 Note `base`/`combined`/`zmap` never agree exactly with R: the base face goes through a
 JPEG/PNG round trip, and the R z-map's nan count differs from python's by a few pixels.
 The existing suite already tolerates that (`< 0.04`, `equal_nan`).
+
+## Pinning the result so it actually gates pushes
+
+`ref/` can never run in CI, so the numbers above are frozen into
+`tests/fixtures/rcicr_seed1.npz` (2.2 MB) and asserted by `tests/test_vs_rcicr_golden.py`
+with `atol=1e-13`: four orders of magnitude above the 4e-17 floating point noise between
+the two implementations, and five below anything a real algorithmic change produces.
+
+`make_golden_fixtures.py` stores only R's output plus the small parameter arrays.
+`patches` and `patch_idx` are left out on purpose - 125 MB each for a 512x512 image -
+`compute_ci` regenerates them from `n_scales`/`noise_type` instead.
+
+```bash
+docker run --rm -v "$PWD/ref":/tests -v "$PWD":/repo -w /tests \
+  hvalev/rcpyci:latest /bin/bash /tests/run_golden_fixtures.sh
+```
+
+The container keeps its scientific stack in `/pyrcicr/bin/python3`, not in `python3` on
+`PATH`; the runner scripts use the absolute interpreter path.
