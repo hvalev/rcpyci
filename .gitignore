@@ -14,4 +14,6 @@ dist/
 .cis/
 *.npy
 *.npz
+# ... except the committed rcicr golden output (tests/test_vs_rcicr_golden.py)
+!tests/fixtures/*.npz
 *.bak.py
