@@ -71,3 +71,10 @@ indent-style = "tab"
 # B = flake8-bugbear (extra)
 # I = isort (extra)
 select = ["E", "F", "B", "I"]
+
+[tool.pytest.ini_options]
+# ref/ holds R-ported reference scripts that need rpy2, they are not part of the test suite
+testpaths = ["tests"]
+# uv treats this pyproject as a virtual project (no [build-system]), so the package is
+# imported from the source tree rather than installed into the environment
+pythonpath = ["."]
