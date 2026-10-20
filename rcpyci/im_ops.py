@@ -66,10 +66,18 @@ def get_image_size(image) -> int:
 
     Returns:
     int: A int containing the height and width of the image.
+
+    Raises:
+    ValueError: If the input is not a square 2D image. Every noise pattern and stimulus
+        parameter space here is laid out for a square image, so a non-square one cannot
+        produce a meaningful CI.
     """
-    assert len(image.shape) == 2
-    assert image.shape[0] == image.shape[1]
-    return image.shape[0]
+    array = np.asarray(image)
+    if array.ndim != 2:
+        raise ValueError(f"expected a 2D image, got a {array.ndim}D array with shape {array.shape}")
+    if array.shape[0] != array.shape[1]:
+        raise ValueError(f"expected a square image, got shape {array.shape}")
+    return array.shape[0]
 
 #TODO tests if adding a mask affects the computation
 def apply_mask(ci: np.ndarray, mask: np.ndarray):
