@@ -1,0 +1,63 @@
+name: Refresh uv.lock
+
+# Dependabot's config is intact and its job still reports "active", but it has not produced
+# a run or a PR since 2026-05-02, so the lockfile gets no periodic refresh at all. This
+# does the same job with a workflow that fails visibly instead of silently.
+#
+# The suite runs here, before the PR is opened, on purpose: a branch pushed with the
+# workflow's own GITHUB_TOKEN does not trigger ci.yml (GitHub suppresses events created by
+# that token to stop recursion), so a PR from this job would otherwise arrive unverified.
+on:
+  schedule:
+    - cron: '0 15 * * 6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Upgrade the lockfile
+        run: uv lock --upgrade
+
+      - name: Verify the refreshed lock before proposing it
+        run: |
+          uv sync --frozen --extra test --extra visu
+          uv run ruff check .
+          uv run pytest
+
+      - name: Open a pull request if the lock changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet -- uv.lock; then
+            echo "uv.lock is already current, nothing to propose"
+            exit 0
+          fi
+
+          pending=$(gh pr list --state open --json headRefName \
+            --jq '[.[] | select(.headRefName | startswith("lock-refresh/"))] | length')
+          if [ "$pending" != "0" ]; then
+            echo "a lock refresh PR is already open, leaving it alone"
+            exit 0
+          fi
+
+          branch="lock-refresh/$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add uv.lock
+          git commit -m "deps: refresh uv.lock (uv lock --upgrade)"
+          git push -u origin "$branch"
+          gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
+            --title "deps: refresh uv.lock" \
+            --body "Scheduled \`uv lock --upgrade\`. The new lock is installed and the full suite (ruff, pytest, including the R parity fixture) runs in the workflow that opened this PR, so a green scheduled run means the lock is usable as-is."
