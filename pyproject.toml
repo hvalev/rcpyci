@@ -16,7 +16,7 @@ dependencies = [
     "tqdm<5.0.0,>=4.67.1",
 ]
 name = "rcpyci"
-version = "0.10.0"
+version = "0.10.1"
 description = "Toolkit for reverse correlation classificiation images"
 readme = "README.md"
 classifiers = [
