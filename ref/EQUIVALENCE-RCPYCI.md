@@ -53,9 +53,11 @@ The existing suite already tolerates that (`< 0.04`, `equal_nan`).
 with `atol=1e-13`: four orders of magnitude above the 4e-17 floating point noise between
 the two implementations, and five below anything a real algorithmic change produces.
 
-`make_golden_fixtures.py` stores only R's output plus the small parameter arrays.
-`patches` and `patch_idx` are left out on purpose - 125 MB each for a 512x512 image -
-`compute_ci` regenerates them from `n_scales`/`noise_type` instead.
+`make_golden_fixtures.py` stores R's `ci` array plus the small parameter arrays. `scaled`
+and the z-map are pinned by mean, std and nan count instead of full arrays, which keeps the
+fixture at 2.2 MB while still moving a number if a scaling constant or a z threshold
+changes. `patches` and `patch_idx` are left out on purpose - 125 MB each for a 512x512
+image - `compute_ci` regenerates them from `n_scales`/`noise_type` instead.
 
 ```bash
 docker run --rm -v "$PWD/ref":/tests -v "$PWD":/repo -w /tests \
