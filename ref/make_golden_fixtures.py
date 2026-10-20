@@ -6,9 +6,16 @@ test_generate_functions.py has produced a matching .Rdata/.npz stimulus pair.
 The fixture deliberately holds only what is small and non-derivable:
 
   r_ci            R's classification image, float64 (512, 512) - the golden numbers
+  r_scaled_stats  mean, std and nan count of R's scaled image (see summary())
+  r_zmap_stats    the same three for R's thresholded z-map
   stimuli_params  the selected + trimmed (n_trials, 4092) parameter rows R used
   responses       (n_trials, 1) column, the shape rcpyci's callers pass
   meta            versions and settings R was called with
+
+Only the CI image is stored in full. scaled and combined are derived from it by one-line
+arithmetic that has its own unit tests, and storing the z-map too would double the fixture
+for a map that is mostly NaN, so those two are pinned by summary statistics instead: enough
+that flipping a scaling constant or a z threshold moves a number.
 
 patches / patch_idx are NOT stored: they are 125 MB for a 512x512 image, and
 rcpyci.__generate_noise_pattern reproduces them deterministically (the container suite
@@ -56,7 +63,9 @@ result_r = np.array(
             baseimage=BASE_LABEL,
             antiCI=False,
             sigma=3,
-            zmap=False,
+            zmap=True,
+            zmapmethod="quick",
+            threshold=1,
             rdata=rdata_file,
             rdatapath=True,
         )
@@ -70,12 +79,24 @@ if params.shape[1] == 4096:
 
 rcicr_version = robjects.conversion.rpy2py(robjects.r("as.character(packageVersion('rcicr'))"))[0]
 
+
+def summary(array):
+    """The three numbers that describe an output array without storing it."""
+    array = np.asarray(array, dtype=np.float64)
+    return np.array([np.nanmean(array), np.nanstd(array), float(np.isnan(array).sum())])
+
+
+print(f"  R scaled stats: {summary(result_r[1])}")
+print(f"  R zmap   stats: {summary(result_r[4])}")
+
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 np.savez_compressed(
     OUT,
     r_ci=result_r[0].astype(np.float64),
     stimuli_params=params.astype(np.float64),
     responses=np.array(RESPONSES, dtype=np.float64).reshape(-1, 1),
+    r_scaled_stats=summary(result_r[1]),
+    r_zmap_stats=summary(result_r[4]),
     meta=np.array(
         {
             "source": "R rcicr generateCI()",
