@@ -23,6 +23,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -58,6 +63,21 @@ jobs:
           git add uv.lock
           git commit -m "deps: refresh uv.lock (uv lock --upgrade)"
           git push -u origin "$branch"
-          gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
+          # Opening the PR needs Settings -> Actions -> General -> "Allow GitHub Actions
+          # to create and approve pull requests". Without it gh fails with a permissions
+          # error, which would turn the schedule red even though the refresh is fine, so
+          # keep the verified branch and report what is left to do instead.
+          if ! gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
             --title "deps: refresh uv.lock" \
-            --body "Scheduled \`uv lock --upgrade\`. The new lock is installed and the full suite (ruff, pytest, including the R parity fixture) runs in the workflow that opened this PR, so a green scheduled run means the lock is usable as-is."
+            --body "Scheduled \`uv lock --upgrade\`. The new lock is installed and the full suite (ruff, pytest, including the R parity fixture) runs in the workflow that opened this PR, so a green scheduled run means the lock is usable as-is."; then
+            echo "::warning::could not open a pull request; the branch $branch is pushed and verified"
+            {
+              echo "## uv.lock refreshed - open the pull request by hand"
+              echo ""
+              echo "\`uv lock --upgrade\` changed the lockfile and the full suite passed against it."
+              echo ""
+              echo "[Open the pull request for \`$branch\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$branch?expand=1)"
+              echo ""
+              echo "Automating this step needs _Settings -> Actions -> General -> Allow GitHub Actions to create and approve pull requests_."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
