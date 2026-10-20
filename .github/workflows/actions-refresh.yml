@@ -1,0 +1,82 @@
+name: Refresh action pins
+
+# Dependabot's github-actions ecosystem went silent on 2026-05-02, the same day its uv one
+# did, and unlike the lockfile nothing else watches these pins. The first dry run of this
+# script found every workflow still on actions/checkout@v6 and actions/setup-python@v6
+# while upstream is at v7 - five months of drift nobody noticed.
+#
+# See lock-refresh.yml for why verification happens in this job rather than on the PR it
+# opens, and why gh pr create is allowed to fail.
+on:
+  schedule:
+    - cron: '0 16 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Raise the pins to their current majors
+        run: python3 .github/scripts/bump_action_pins.py
+
+      - name: Check every workflow still parses
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 -c "
+          import glob, yaml
+          for path in sorted(glob.glob('.github/workflows/*.y*ml')):
+              yaml.safe_load(open(path))
+              print('  ok', path)
+          "
+
+      - name: Open a pull request if anything changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet -- .github/workflows; then
+            echo "action pins are current, nothing to propose"
+            exit 0
+          fi
+
+          pending=$(gh pr list --state open --json headRefName \
+            --jq '[.[] | select(.headRefName | startswith("action-refresh/"))] | length')
+          if [ "$pending" != "0" ]; then
+            echo "an action refresh PR is already open, leaving it alone"
+            exit 0
+          fi
+
+          branch="action-refresh/$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add .github/workflows
+          git commit -m "ci: raise action pins to their current majors"
+          git push -u origin "$branch"
+
+          # Needs Settings -> Actions -> General -> "Allow GitHub Actions to create and
+          # approve pull requests"; without it, keep the branch and point at it instead of
+          # turning the schedule red.
+          if ! gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
+            --title "ci: raise action pins to their current majors" \
+            --body "Scheduled run of \`.github/scripts/bump_action_pins.py\`. The workflow files were re-parsed after rewriting, and the ci matrix runs against this branch before anything is merged."; then
+            echo "::warning::could not open a pull request; the branch $branch is pushed"
+            {
+              echo "## Action pins raised - open the pull request by hand"
+              echo ""
+              echo "[Open the pull request for \`$branch\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$branch?expand=1)"
+              echo ""
+              echo "Automating this needs _Settings -> Actions -> General -> Allow GitHub Actions to create and approve pull requests_."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
