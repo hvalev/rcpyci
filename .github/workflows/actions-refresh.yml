@@ -55,7 +55,7 @@ jobs:
 
           if url=$(gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
             --title "ci: workflow permission probe (close me)" \
-            --body "Created by a workflow_dispatch of the refresh workflow to check that Actions may open pull requests. Nothing here needs reviewing - close it."; then
+            --body "Created by a workflow_dispatch of the refresh workflow to check that Actions may open pull requests. Nothing here needs reviewing - close it."); then
             number=$(printf '%s' "$url" | grep -oE '[0-9]+$')
             gh pr close "$number" --delete-branch --comment "probe finished, closing" || true
             {
