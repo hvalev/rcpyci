@@ -11,6 +11,11 @@ on:
   schedule:
     - cron: '0 16 * * 0'
   workflow_dispatch:
+    inputs:
+      probe_pr_creation:
+        description: "Create and immediately close a throwaway PR to verify workflow PR permissions"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,6 +32,51 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.13"
+
+      # The "Allow GitHub Actions to create and approve pull requests" setting is not
+      # readable through the REST or GraphQL API, so the only way to know is to try it.
+      # Dispatch by hand with the input ticked to re-check after changing that setting.
+      - name: Probe workflow pull-request permissions
+        if: ${{ inputs.probe_pr_creation }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branch="pr-permission-probe/$(date -u +%Y-%m-%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          {
+            echo "Throwaway branch created by a workflow_dispatch of actions-refresh.yml."
+            echo "Created at $(date -u +%FT%TZ) to test whether the github-actions token may open pull requests."
+          } > .github/PR_PERMISSION_PROBE.md
+          git add .github/PR_PERMISSION_PROBE.md
+          git commit -m "ci: probe workflow pull-request permissions"
+          git push -u origin "$branch"
+
+          if url=$(gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
+            --title "ci: workflow permission probe (close me)" \
+            --body "Created by a workflow_dispatch of the refresh workflow to check that Actions may open pull requests. Nothing here needs reviewing - close it."; then
+            number=$(printf '%s' "$url" | grep -oE '[0-9]+$')
+            gh pr close "$number" --delete-branch --comment "probe finished, closing" || true
+            {
+              echo "## Workflow pull-request creation: permitted"
+              echo ""
+              echo "Opened and closed #$number with the github-actions token."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::workflow pull-request creation is still blocked"
+            git push origin --delete "$branch" || true
+            {
+              echo "## Workflow pull-request creation: blocked"
+              echo ""
+              echo "_Settings -> Actions -> General -> Allow GitHub Actions to create and approve pull requests_ is still off, so both refresh workflows will keep pushing verified branches instead of filing PRs."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # Back to the dispatched ref, otherwise a probe run would leave the later steps
+          # committing the lockfile or pin changes onto the probe branch.
+          git checkout -q "$GITHUB_REF_NAME"
+          git branch -D "$branch" >/dev/null 2>&1 || true
 
       - name: Raise the pins to their current majors
         run: python3 .github/scripts/bump_action_pins.py
