@@ -57,7 +57,7 @@ jobs:
 
           if url=$(gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
             --title "ci: workflow permission probe (close me)" \
-            --body "Created by a workflow_dispatch of the refresh workflow to check that Actions may open pull requests. Nothing here needs reviewing - close it."; then
+            --body "Created by a workflow_dispatch of the refresh workflow to check that Actions may open pull requests. Nothing here needs reviewing - close it."); then
             number=$(printf '%s' "$url" | grep -oE '[0-9]+$')
             gh pr close "$number" --delete-branch --comment "probe finished, closing" || true
             {
@@ -83,15 +83,10 @@ jobs:
       - name: Raise the pins to their current majors
         run: python3 .github/scripts/bump_action_pins.py
 
-      - name: Check every workflow still parses
+      - name: Check the rewritten workflows are valid
         run: |
           python3 -m pip install --quiet pyyaml
-          python3 -c "
-          import glob, yaml
-          for path in sorted(glob.glob('.github/workflows/*.y*ml')):
-              yaml.safe_load(open(path))
-              print('  ok', path)
-          "
+          python3 .github/scripts/check_workflows.py
 
       - name: Open a pull request if anything changed
         env:
