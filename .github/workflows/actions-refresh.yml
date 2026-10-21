@@ -41,7 +41,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          branch="pr-permission-probe/$(date -u +%Y-%m-%d-%H%M%S)"
+          # A ref cannot be both a file and a directory, so this prefix must not collide
+          # with any existing branch name; it is removed again at the end of the step.
+          branch="probe/workflow-pr-permissions/$(date -u +%Y-%m-%d-%H%M%S)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
@@ -51,7 +53,7 @@ jobs:
           } > .github/PR_PERMISSION_PROBE.md
           git add .github/PR_PERMISSION_PROBE.md
           git commit -m "ci: probe workflow pull-request permissions"
-          git push -u origin "$branch"
+          git push -u origin "$branch" || { echo "::error::could not push the probe branch"; exit 1; }
 
           if url=$(gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
             --title "ci: workflow permission probe (close me)" \
